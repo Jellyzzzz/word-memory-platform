@@ -1,0 +1,29 @@
+' 来源：《详细设计说明书》1.1.2 用户模块功能点（2）用户登录
+@startuml 用户登录序列图
+title 用户登录序列图
+autonumber
+
+actor 游客 as guest
+participant "UserController" as UC
+participant "UserService" as US
+participant "UserMapper" as UM
+participant "HttpSession" as S
+
+note over guest : 前置条件：未登录，处于登录页
+
+guest -> UC : POST /login（username, password）
+UC -> US : login(username, password)
+US -> UM : findByUsername(username)
+UM --> US : 返回 User 记录
+US -> US : 比对 SHA-256(salt + password) 哈希
+alt 校验失败（用户名不存在 / 密码错误）
+  US --> UC : 返回失败
+  UC --> guest : 提示「用户名或密码错误」，回到登录页
+else 校验成功
+  US --> UC : 返回 User
+  UC -> S : setAttribute("userId", user.getId())
+  UC --> guest : 跳转首页（home.jsp）
+end
+
+note over S : 后置条件：Session 写入 userId，跳转首页
+@enduml

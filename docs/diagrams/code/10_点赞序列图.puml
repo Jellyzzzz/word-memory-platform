@@ -1,0 +1,38 @@
+' 来源：《详细设计说明书》功能点 3-2 点赞设计（点赞请求处理序列图）
+@startuml 点赞序列图
+title 点赞序列图
+autonumber
+
+actor 用户 as user
+participant "RankingController" as RC
+participant "RankingService" as RS
+participant "LikeMapper" as LM
+participant "UserMapper" as UM
+
+note over user : 前置条件：已登录，处于排行榜页
+
+user -> RC : POST /ranking/like（toUserId）
+RC -> RS : like(fromUserId, toUserId)
+RS -> RS : 校验不能为自己点赞
+alt fromUserId == toUserId（为自己点赞）
+  RS --> RC : 拒绝
+  RC --> user : 提示「不能为自己点赞」
+else 合法目标
+  RS -> LM : checkLike(fromUserId, toUserId)（校验未点赞）
+  LM --> RS : 查询结果（是否已点赞）
+  alt 已点赞过
+    RS --> RC : 返回失败
+    RC --> user : 提示「已点赞」（第一版不可取消）
+  else 未点赞
+    RS -> LM : insertLike（写入点赞记录）
+    LM --> RS : 写入成功
+    RS -> UM : incrTotalLikes(toUserId)（累加获赞数）
+    UM --> RS : 更新成功
+    note over RS : 事务保证「写入点赞 + 累加获赞数」原子性
+    RS --> RC : 返回成功
+    RC --> user : 返回更新后的排行榜
+  end
+end
+
+note over LM : 后置条件：likes 表新增记录，目标用户 total_likes+1
+@enduml

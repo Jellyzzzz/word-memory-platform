@@ -1,0 +1,27 @@
+' 来源：《详细设计说明书》1.1.2 之「3. 排行榜模块功能点」
+@startuml 排行榜模块用例图
+title 排行榜模块用例图
+
+left to right direction
+
+actor 普通用户 as user
+
+rectangle "排行榜模块" {
+  usecase "查看排行榜" as UC1
+  usecase "点赞" as UC2
+}
+
+user --> UC1
+user --> UC2
+
+note bottom of UC1
+  全局排名，所有用户可见；
+  排序：score DESC（同分按 total_likes DESC，再按 created_at ASC）；
+  展示：排名、用户名、积分、获赞数、点赞按钮
+end note
+note bottom of UC2
+  不能为自己点赞；同一用户对同一目标仅可点赞一次
+  （UNIQUE(from_user_id, to_user_id)），第一版不可取消；
+  点赞后 likes 表新增记录，目标用户 total_likes+1
+end note
+@enduml

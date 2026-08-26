@@ -1,0 +1,37 @@
+' 来源：《详细设计说明书》1.1.1 系统角色及其功能
+@startuml 系统角色图
+title 系统角色图
+
+left to right direction
+
+class "游客" as guest <<角色>> {
+  未登录的访问者
+  --
+  仅可访问登录页 /login、注册页 /register
+  用户注册
+  用户登录
+}
+
+class "普通用户" as user <<角色>> {
+  已登录用户
+  --
+  学习模式 / 复习模式答题
+  标记为不熟练
+  查看 / CSV 导入 / 删除自定义单词
+  查看排行榜
+  为他人点赞
+  用户退出
+}
+
+guest --> user : 注册成功 / 登录成功\n（Session 写入 userId）
+
+note bottom of guest
+  访问受保护资源时被 LoginInterceptor
+  拦截并重定向到 /login
+end note
+
+note bottom of user
+  单角色业务系统：所有登录用户权限一致，无管理员角色；
+  系统内置单词由 SQL 脚本预置
+end note
+@enduml

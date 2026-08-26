@@ -1,0 +1,31 @@
+' 来源：《详细设计说明书》功能点 2-4 自定义单词管理设计（CSV 导入序列图）
+@startuml CSV导入序列图
+title CSV 导入序列图
+autonumber
+
+actor 用户 as user
+participant "LearningController" as LC
+participant "LearningService" as LS
+participant "CsvUtil" as CU
+participant "WordMapper" as WM
+
+note over user : 前置条件：已登录，处于自定义单词管理页（合并于 home.jsp）
+
+user -> LC : POST /words/import（file）
+LC -> LS : importWords(file, userId)
+LS -> CU : parse(file)（UTF-8 逐行解析）
+alt 文件为空 / 格式错误
+  CU --> LS : 解析失败
+  LS --> LC : 返回失败原因
+  LC --> user : 提示错误并中止导入
+else 解析成功
+  CU --> LS : 返回单词列表 + 失败计数（字段缺失行跳过）
+  LS -> LS : 设置 source=custom、owner_id=当前用户
+  LS -> WM : insertWord（批量写入）
+  WM --> LS : 写入结果
+  LS --> LC : 返回成功 / 失败条数
+  LC --> user : 展示导入结果
+end
+
+note over WM : 后置条件：解析成功的单词写入 words 表（source=custom，owner_id=当前用户）
+@enduml

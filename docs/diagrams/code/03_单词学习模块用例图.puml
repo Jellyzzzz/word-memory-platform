@@ -1,0 +1,43 @@
+' 来源：《详细设计说明书》1.1.2 之「2. 单词学习模块功能点」
+@startuml 单词学习模块用例图
+title 单词学习模块用例图
+
+left to right direction
+
+actor 普通用户 as user
+
+rectangle "单词学习模块" {
+  usecase "学习模式答题" as UC1
+  usecase "复习模式答题" as UC2
+  usecase "标记为不熟练" as UC3
+  usecase "自定义词库管理" as UC4
+  usecase "查看自定义单词" as UC41
+  usecase "CSV 导入单词" as UC42
+  usecase "删除自定义单词" as UC43
+}
+
+user --> UC1
+user --> UC2
+user --> UC3
+user --> UC4
+
+UC4 ..> UC41 : <<include>>
+UC4 ..> UC42 : <<include>>
+UC4 ..> UC43 : <<include>>
+
+note bottom of UC1
+  取词来源：status=learning 的单词池
+end note
+note bottom of UC2
+  取词来源：status=mastered 的单词池；
+  答错使熟练度低于阈值时回退 learning
+end note
+note bottom of UC3
+  proficiency=0，status=learning，
+  该词重新进入学习池
+end note
+note bottom of UC42
+  CSV 格式：english,chinese[,part_of_speech]，
+  UTF-8 编码，每行一条
+end note
+@enduml

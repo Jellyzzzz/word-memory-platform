@@ -1,0 +1,44 @@
+' 来源：《详细设计说明书》1.1.2 需求规定（按功能点编写用例描述）
+@startuml 总体用例图
+title 总体用例图
+
+left to right direction
+
+actor 游客 as guest
+actor 普通用户 as user
+
+rectangle "单词记忆与竞技学习平台" {
+  usecase "用户注册" as UC1
+  usecase "用户登录" as UC2
+  usecase "用户退出" as UC3
+  usecase "学习模式答题" as UC4
+  usecase "复习模式答题" as UC5
+  usecase "标记为不熟练" as UC6
+  usecase "自定义词库管理" as UC7
+  usecase "查看自定义单词" as UC71
+  usecase "CSV 导入单词" as UC72
+  usecase "删除自定义单词" as UC73
+  usecase "查看排行榜" as UC8
+  usecase "点赞" as UC9
+}
+
+guest --> UC1
+guest --> UC2
+
+user --> UC3
+user --> UC4
+user --> UC5
+user --> UC6
+user --> UC7
+user --> UC8
+user --> UC9
+
+UC7 ..> UC71 : <<include>>
+UC7 ..> UC72 : <<include>>
+UC7 ..> UC73 : <<include>>
+
+note bottom of user
+  普通用户的所有用例前置条件为「已登录」，
+  由 LoginInterceptor 统一保证
+end note
+@enduml

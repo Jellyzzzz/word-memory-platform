@@ -1,0 +1,808 @@
+
+
+
+单词记忆与竞技学习平台
+
+需求分析和系统详细设计书
+
+
+
+本项目开发一个基于 Java Web 的单词学习平台，实现用户注册登录、单词学习、单词复习、熟练度管理、排行榜与点赞功能。系统的竞技性仅通过排行榜体现，不实现用户之间的实时或异步对战。
+
+
+
+
+
+1 系统需求
+
+1.1 功能需求
+
+1.1.1 系统角色及其功能
+
+角色：游客
+
+未登录的访问者。可以仅可访问登录页、注册页；访问受保护资源被 LoginInterceptor 重定向到 /login。
+
+
+
+角色：普通用户
+
+已登录用户。可以学习、复习、查看/导入/删除自定义单词、查看排行榜、为他人点赞。
+
+
+
+系统为「单角色业务系统」，所有登录用户权限一致，无面向用户的后台管理端；系统内置单词由 SQL 脚本预置，不引入管理员角色。
+
+
+
+1.1.2 需求规定（按功能点编写用例描述）
+
+1. 用户模块功能点
+
+（1）用户注册
+
+参与者：游客
+
+前置条件：未登录，处于注册页
+
+后置条件：用户记录写入 users 表；页面跳转登录页
+
+主事件流：① 输入用户名、密码（确认密码）→ ② 系统校验用户名唯一性与密码合法性 → ③ 系统对密码加盐哈希 → ④ 写入数据库 → ⑤ 提示注册成功并跳转登录页
+
+备选事件流：用户名已存在 → 提示并回到注册页；密码为空/过短/两次不一致 → 提示并回到注册页
+
+业务规则：用户名全局唯一；密码非空且长度 ≥ 6
+
+业务实体：User
+
+
+
+（2）用户登录
+
+参与者：游客
+
+前置条件：未登录，处于登录页
+
+后置条件：Session 写入 userId；跳转首页
+
+主事件流：① 输入用户名、密码 → ② 系统校验用户名存在且密码哈希匹配 → ③ session.setAttribute("userId", user.getId()) → ④ 跳转首页
+
+备选事件流：用户名不存在 / 密码错误 → 提示「用户名或密码错误」并回到登录页
+
+业务规则：密码比对基于加盐哈希，不存明文
+
+业务实体：User
+
+
+
+（3）用户退出
+
+参与者：普通用户
+
+前置条件：已登录
+
+后置条件：Session 失效；跳转登录页
+
+主事件流：① 点击退出 → ② session.invalidate() → ③ 跳转 /login
+
+备选事件流：无
+
+业务规则：退出后必须清除登录态，访问受保护资源需重新登录
+
+业务实体：User
+
+
+
+
+
+2. 单词学习模块功能点
+
+（1）学习模式答题
+
+参与者：普通用户
+
+前置条件：已登录，存在 status=learning 的单词
+
+后置条件：用户熟练度与积分更新；返回下一题
+
+主事件流：① 进入学习模式 → ② 系统从 learning 池取词并生成题目（选择/填空随机）→ ③ 用户作答 → ④ 判断对错 → ⑤ 更新熟练度与积分 → ⑥ 返回下一题，直至用户主动结束
+
+备选事件流：单词池为空 → 提示「暂无待学习单词」；用户主动结束 → 汇总本次学习结果
+
+业务规则：答对熟练度 +1；熟练度 ≥ 3 时 status 转为 mastered；答对 score+1
+
+业务实体：Word, UserWordProgress, User
+
+
+
+（2）复习模式答题
+
+参与者：普通用户
+
+前置条件：已登录，存在 status=mastered 的单词
+
+后置条件：熟练度与积分更新；可能回退到 learning 池
+
+主事件流：① 进入复习模式 → ② 系统从 mastered 池取词生成题目 → ③ 用户作答 → ④ 更新熟练度/积分 → ⑤ 返回下一题
+
+备选事件流：单词池为空 → 提示；答错使熟练度低于阈值 → 该词回退 learning
+
+业务规则：答对熟练度 +1（上限 5）；答错 -1；< 3 时回退 learning
+
+业务实体：Word, UserWordProgress, User
+
+
+
+（3）熟练度记录
+
+参与者：普通用户
+
+前置条件：已登录，处于复习模式或某单词详情
+
+后置条件：该单词熟练度归零并回到 learning 池
+
+主事件流：① 用户对某单词点击「标记为不熟练」→ ② POST /learning/mark-unfamiliar → ③ 系统将该用户-单词进度 proficiency=0, status=learning → ④ 返回更新结果
+
+备选事件流：进度记录不存在 → 新建一条 learning 记录
+
+业务规则：标记后该词重新进入学习池
+
+业务实体：UserWordProgress
+
+
+
+（4）自定义词库管理
+
+参与者：普通用户
+
+前置条件：已登录，处于自定义单词管理页（合并于 home.jsp）
+
+后置条件：导入：解析成功的单词写入 words 表（source=custom，owner_id=当前用户）；删除：对应记录移除
+
+主事件流：
+
+查看：① 进入管理页 → ② 列出当前用户全部 source=custom 单词；
+
+导入：① 上传 CSV → ② 服务端逐行解析 → ③ 校验字段 → ④ 批量写入 → ⑤ 展示成功/失败条数；
+
+删除：① 点击删除 → ② 校验归属 → ③ 删除记录
+
+备选事件流：文件为空/格式错误 → 提示并中止；某行字段缺失 → 跳过该行并计数；删除非本人单词 → 拒绝
+
+业务规则：CSV 格式 english,chinese[,part_of_speech]，UTF-8 编码，每行一条；仅能删除本人自定义单词，内置单词不可删
+
+业务实体：Word
+
+
+
+3.排行榜模块功能点
+
+（1）查看排行榜
+
+参与者：普通用户
+
+前置条件：已登录
+
+后置条件：页面展示全局排行榜
+
+主事件流：① 进入排行榜页 → ② 系统按 score DESC（同分按 total_likes DESC，再按 created_at ASC）查询 → ③ 展示排名、用户名、积分、获赞数、点赞按钮
+
+备选事件流：无
+
+业务规则：排行榜为全局排名，所有用户可见
+
+业务实体：User
+
+
+
+（2）点赞
+
+参与者：普通用户
+
+前置条件：已登录，处于排行榜页
+
+后置条件：likes 表新增记录；目标用户 total_likes+1；页面刷新
+
+主事件流：① 点击点赞按钮 → ② POST /ranking/like → ③ 校验未重复点赞 → ④ 写入点赞记录并累加获赞数 → ⑤ 返回更新后的排行榜
+
+备选事件流：已点赞过 → 提示「已点赞」（第一版不可取消）；为自己点赞 → 拒绝
+
+业务规则：不能为自己点赞；UNIQUE(from_user_id, to_user_id)
+
+业务实体：Like, User
+
+
+
+1.1.3 业务实体分析
+
+实体
+
+说明
+
+关键属性
+
+User
+
+用户
+
+user_id, username, password_hash, score, total_likes 等
+
+Word
+
+单词
+
+word_id, english, chinese, source, owner_id 等
+
+UserWordProgress
+
+用户-单词学习进度
+
+user_id, word_id, proficiency, status
+
+Like
+
+点赞
+
+from_user_id, to_user_id
+
+
+
+
+
+
+
+更多属性及其关系在图中列出。
+
+
+
+1.2 非功能性需求
+
+1. 安全需求
+
+密码存储：SHA-256 + 随机盐，数据库不存明文。
+
+登录态：基于 HttpSession 的会话登录，同一会话内状态一致。
+
+越权访问防护：LoginInterceptor 统一拦截未登录请求，重定向 /login。
+
+
+
+2. 外部接口需求
+
+应用不设第三方外部接口；CSV 导入自定义为用户本地文件上传，无网络依赖。
+
+
+
+2 系统设计
+
+2.1 基于 MVC 的软件架构设计
+
+2.2 功能模块设计
+
+2.2.1 功能模块划分
+
+单词记忆与竞技学习平台
+
+├── 1. 用户模块
+
+│   ├── 1.1 用户注册
+
+│   ├── 1.2 用户登录
+
+│   └── 1.3 用户退出
+
+├── 2. 单词学习模块
+
+│   ├── 2.1 学习模式（未掌握单词）
+
+│   ├── 2.2 复习模式（已掌握单词）
+
+│   ├── 2.3 熟练度管理（标记为不熟练）
+
+│   └── 2.4 自定义单词管理
+
+│       ├── 2.4.1 查看自定义单词
+
+│       ├── 2.4.2 CSV 导入单词
+
+│       └── 2.4.3 删除自定义单词
+
+└── 3. 排行榜模块
+
+    ├── 3.1 查看排行榜
+
+    └── 3.2 点赞
+
+
+
+2.2.2 模块设计
+
+每个功能点设计包含四部分：MVC 资源命名、业务逻辑过程（UML 序列图）、类设计、UI 设计。
+
+
+
+1. 用户模块设计
+
+2. 单词学习模块设计
+
+MVC 资源命名如下：
+
+层
+
+资源
+
+命名
+
+Controller
+
+LearningController
+
+GET/learning、GET/review、
+
+GET /learning/question、                                 POST/learning/answer、
+
+POST/learning/mark-unfamiliar、POST/words/import、
+
+POST/words/delete
+
+Service
+
+LearningService
+
+getLearningWords、getReviewWords、generateQuestion、judgeAnswer、updateProgress、markUnfamiliar、
+
+importWords、listCustomWords、deleteCustomWord
+
+Mapper
+
+WordMapper、UserWordProgressMapper
+
+findByStatus、findRandom、insertWord、deleteCustomWord、                                               listCustomWords、insertProgress、updateProgress
+
+Entity / DTO
+
+Word、UserWordProgress/
+
+AnswerRequest
+
+对应 words、user_word_progress 表
+
+
+
+（1）学习模式答题设计
+
+
+
+参与者：
+
+用户、LearningController、LearningService、WordMapper、UserWordProgressMapper
+
+
+
+流程：
+
+1. 用户 → LearningController：GET /learning/question
+
+2. LearningController → LearningService：generateQuestion()
+
+3. LearningService → WordMapper：findByStatus(learning) 取词
+
+4. LearningService 生成选择/填空题目（含干扰项）
+
+5. 返回题目 JSON → 渲染题目
+
+6. 用户 → LearningController：POST /learning/answer（wordId, answer）
+
+7. LearningController → LearningService：judgeAnswer(wordId, answer)
+
+8. LearningService 判断对错 + 计算熟练度变化 → UserWordProgressMapper.updateProgress(...)
+
+9. 返回对错结果 + 正确答案（JSON）
+
+
+
+类设计：
+
+LearningController.learning()/question()/answer() → LearningService.generateQuestion()/judgeAnswer()/updateProgress()。
+
+核心逻辑集中在 Service 层。
+
+
+
+UI 设计：
+
+learning.jsp —— 题干区 + 选项区（选择）/ 输入框（填空）+「提交/下一题/结束」按钮；移动端选项全宽、触控友好。
+
+
+
+2. 复习模式答题设计
+
+业务逻辑过程：
+
+与学习模式同构，取词来源改为 mastered 池，判定后按附录 A.1 复习规则更新熟练度。
+
+
+
+类设计：
+
+复用 LearningService.generateQuestion()/judgeAnswer()/updateProgress()以 mode=review 区分取词池与熟练度规则。
+
+
+
+UI 设计：
+
+review.jsp —— 与 learning.jsp 同构，增加「标记为不熟练」按钮。
+
+
+
+3. 标记为不熟练设计
+
+业务逻辑过程：
+
+POST /learning/mark-unfamiliar(wordId) →LearningController.markUnfamiliar() → LearningService.markUnfamiliar() → UserWordProgressMapper.updateProgress(proficiency=0, status=learning)。
+
+
+
+类设计：LearningService.markUnfamiliar() + UserWordProgressMapper.updateProgress()。
+
+
+
+UI 设计：review.jsp 中每词附「标记为不熟练」按钮。
+
+
+
+
+
+功能点 2-4 自定义单词管理设计
+
+
+
+业务逻辑过程（序列图，以 CSV 导入为例）：
+
+
+
+【图 2-5 CSV 导入序列图 —— 需用 StarUML / draw.io 绘制后插入】
+
+参与者：用户、LearningController、LearningService、CsvUtil、WordMapper
+
+流程：
+
+1. 用户 → LearningController：POST /words/import（file）
+
+2. LearningController → LearningService：importWords(file, userId)
+
+3. LearningService → CsvUtil：parse(file) 逐行解析
+
+4. 得到单词列表 + 失败计数 → WordMapper.insertWord(批量)
+
+5. 返回成功/失败条数 → 展示导入结果
+
+
+
+类设计：LearningService.listCustomWords()/importWords()/deleteCustomWord() + WordMapper.listCustomWords()/insertWord()/deleteCustomWord() + util.CsvUtil（手写解析）。删除时校验 owner_id == 当前用户。
+
+
+
+UI 设计：合并于 home.jsp —— 自定义单词列表（表格/卡片）+ CSV 上传控件 + 每行删除按钮。
+
+
+
+
+
+2.2.2.3 排行榜模块设计
+
+
+
+MVC 资源命名
+
+
+
+层              资源                    命名
+
+---------------------------------------------------------------------------
+
+Controller      RankingController       GET /ranking、POST /ranking/like
+
+Service         RankingService          getRanking、like
+
+Mapper          UserMapper、LikeMapper  listRanking、insertLike、checkLike、incrTotalLikes
+
+Entity          User、Like              对应 users、likes 表
+
+
+
+
+
+功能点 3-1 查看排行榜设计
+
+
+
+业务逻辑过程（文本描述）：GET /ranking → RankingController.ranking() → RankingService.getRanking() → UserMapper.listRanking()（ORDER BY score DESC, total_likes DESC, created_at ASC）→ 返回列表渲染。
+
+
+
+类设计：RankingService.getRanking() + UserMapper.listRanking()。
+
+
+
+UI 设计：ranking.jsp —— 排行榜表格（排名/用户名/积分/获赞数/点赞按钮）；移动端用横向滚动容器或卡片式列表替换。
+
+
+
+
+
+功能点 3-2 点赞设计
+
+
+
+业务逻辑过程（序列图）：
+
+
+
+【图 2-6 点赞请求处理序列图 —— 需用 StarUML / draw.io 绘制后插入】
+
+参与者：用户、RankingController、RankingService、LikeMapper、UserMapper
+
+流程：
+
+1. 用户 → RankingController：POST /ranking/like（toUserId）
+
+2. RankingController → RankingService：like(fromUserId, toUserId)
+
+3. RankingService → LikeMapper：checkLike(from, to)（校验未点赞）
+
+4. RankingService → LikeMapper：insertLike（写入点赞）
+
+5. RankingService → UserMapper：incrTotalLikes(toUserId)（累加获赞数）
+
+6. 返回成功 → 返回更新后排行榜
+
+
+
+类设计：RankingService.like()（LikeMapper.checkLike/insertLike + UserMapper.incrTotalLikes），事务保证「写入点赞 + 累加获赞数」原子性。RankingService 判「不可为自己点赞」。
+
+
+
+UI 设计：ranking.jsp 每行点赞按钮，已点赞置灰；点击后局部刷新排行。
+
+
+
+
+
+2.3 数据库设计
+
+
+
+选型：MySQL 5.7+/8.0，字符集 utf8mb4，存储引擎 InnoDB。
+
+
+
+2.3.1 逻辑结构设计
+
+
+
+业务实体及关系见 1.1.3 的 E-R 图（User、Word、UserWordProgress、Like 四实体及三组一对多关系）。逻辑结构上：
+
+
+
+- UserWordProgress 为「用户 × 单词」的多对多关联表，将 User—Word 多对多分解为两个一对多，并承载 proficiency、status 两个学习状态属性。
+
+- Like 为「用户 × 用户」自关联表，通过 from_user_id / to_user_id 表达点赞关系。
+
+- Word.source 用于区分内置单词（builtin，owner_id=NULL）与自定义单词（custom，owner_id 指向所属用户）。
+
+
+
+2.3.2 物理结构设计
+
+
+
+users（用户表）
+
+
+
+字段名           类型              约束                           说明
+
+----------------------------------------------------------------------------------
+
+user_id         INT               PK, AUTO_INCREMENT            用户 ID
+
+username        VARCHAR(50)       NOT NULL, UNIQUE              用户名
+
+password_hash   VARCHAR(64)       NOT NULL                      SHA-256 十六进制
+
+salt            VARCHAR(32)       NOT NULL                      随机盐
+
+score           INT               NOT NULL DEFAULT 0            排行榜积分
+
+total_likes     INT               NOT NULL DEFAULT 0            获赞数
+
+created_at      DATETIME          DEFAULT CURRENT_TIMESTAMP     注册时间
+
+
+
+words（单词表）
+
+
+
+字段名           类型              约束                           说明
+
+----------------------------------------------------------------------------------
+
+word_id         INT               PK, AUTO_INCREMENT            单词 ID
+
+english         VARCHAR(100)      NOT NULL                      英文
+
+chinese         VARCHAR(200)      NOT NULL                      中文释义
+
+part_of_speech  VARCHAR(20)       NULL                          词性（可选）
+
+source          VARCHAR(10)       NOT NULL                      builtin / custom
+
+owner_id        INT               NULL, FK→users.user_id        自定义单词所属用户；内置为 NULL
+
+
+
+user_word_progress（用户-单词学习进度表）
+
+
+
+字段名           类型              约束                           说明
+
+----------------------------------------------------------------------------------
+
+id              INT               PK, AUTO_INCREMENT            主键
+
+user_id         INT               NOT NULL, FK→users.user_id    用户 ID
+
+word_id         INT               NOT NULL, FK→words.word_id    单词 ID
+
+proficiency     INT               NOT NULL DEFAULT 0            熟练度
+
+status          VARCHAR(20)       NOT NULL DEFAULT 'learning'   learning / mastered
+
+
+
+附加约束：UNIQUE(user_id, word_id)，防止同一用户同一单词产生重复进度记录。
+
+
+
+likes（点赞表）
+
+
+
+字段名           类型              约束                           说明
+
+----------------------------------------------------------------------------------
+
+id              INT               PK, AUTO_INCREMENT            主键
+
+from_user_id    INT               NOT NULL, FK→users.user_id    点赞人
+
+to_user_id      INT               NOT NULL, FK→users.user_id    被赞人
+
+created_at      DATETIME          DEFAULT CURRENT_TIMESTAMP     点赞时间
+
+
+
+附加约束：UNIQUE(from_user_id, to_user_id)，同一人仅能点赞一次。
+
+
+
+
+
+附录 A · 关键算法与规则设计
+
+
+
+A.1 熟练度规则（proficiency）
+
+
+
+- 取值范围 0 ~ 5，初始 0，状态 learning。
+
+- 学习模式（learning 池）：答对 +1，答错 +0。
+
+- 晋升：proficiency >= 3 时 status 置为 mastered，进入复习池。
+
+- 复习模式（mastered 池）：答对 +1（上限 5），答错 -1。
+
+- 降级：复习答错使 proficiency < 3 时，status 回退 learning。
+
+- 手动标记不熟练：proficiency = 0，status = learning。
+
+
+
+A.2 积分规则（score）
+
+
+
+- 每次答题（学习或复习）答对 score +1，答错不加分。
+
+- score 与 proficiency 为两个独立逻辑概念：前者为排行榜竞争指标，后者为单词掌握度。
+
+- 排行榜排序：score DESC，同分按 total_likes DESC，再按 created_at ASC。
+
+
+
+A.3 出题规则
+
+
+
+- 选择题：题干「英文 → 选择正确中文」；1 个正确项 + 3 个从其他单词随机抽取的中文释义作为干扰项；4 个选项随机排列。
+
+- 填空题：题干「中文释义 → 输入英文」；判定时忽略大小写与首尾空格。
+
+
+
+A.4 密码哈希
+
+
+
+- 注册时生成随机盐（16 字节），hash = SHA-256(salt + password) 转十六进制存储，连同 salt 一起入库。
+
+- 登录时用相同算法重算并比对。
+
+
+
+A.5 CSV 解析
+
+
+
+- 编码 UTF-8；每行一条：english,chinese[,part_of_speech]；空行与格式错误行跳过并计数。
+
+- 使用 JDK 自带 IO 手动解析，避免引入 commons-csv 等额外依赖（如需鲁棒性可后续评估）。
+
+
+
+
+
+附录 B · 设计决策与待确认事项
+
+
+
+本设计书已确定的设计决策
+
+
+
+D1 系统角色：仅「游客」与「普通用户」两种，不引入管理员；系统内置单词由 SQL 脚本预置。
+
+D2 移动端适配：单一 JSP 页面 + Bootstrap 响应式栅格，同时适配 PC 与移动端（≥ 模拟器）。
+
+D3 密码存储：SHA-256 + 随机盐（JDK 自带，不引入额外依赖）；课程项目权衡，非生产级。
+
+D4 点赞重复：同一用户对同一目标只能点赞一次（UNIQUE(from_user_id, to_user_id)），第一版不可取消。
+
+D5 积分规则：每次答题答对 score +1，与熟练度相互独立；获赞数单独统计为 total_likes。
+
+
+
+仍需团队最终确认
+
+
+
+- 组号、成员分工。
+
+- JDK / Spring Framework / MyBatis / Tomcat 具体小版本。
+
+- 页面视觉风格（配色、字体）。
+
+- CSV 解析是否需要引入第三方库以增强鲁棒性。
+
+
+
+
+
+附录 C · 交付物清单（对照课程要求）
+
+
+
+- 本设计说明书（含用例图、E-R 图、类图、序列图、架构图、页面原型）。
+
+- 数据库 SQL 脚本（建表 + 内置单词 + 唯一约束）。
+
+- 可部署运行的完整源码工程（含全部第三方 jar）。
+
+- 演示视频、总报告、个人工作报告。
+
+

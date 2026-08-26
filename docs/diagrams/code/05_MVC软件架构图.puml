@@ -1,0 +1,76 @@
+' 来源：《详细设计说明书》2.1 基于 MVC 的软件架构设计、
+' 《Spec》4 系统整体架构、5 分层职责、6 建议工程结构
+@startuml MVC软件架构图
+title MVC 软件架构图
+skinparam packageStyle rectangle
+
+package "客户端（Browser）" {
+  [PC / 移动端浏览器（移动端 ≥ 模拟器）] as browser
+}
+
+package "View 层\nWEB-INF/views/ + static/" as viewp {
+  [login.jsp]
+  [register.jsp]
+  [home.jsp]
+  [learning.jsp]
+  [review.jsp]
+  [ranking.jsp]
+  [static/（css、js）]
+}
+
+package "Controller 层（controller 包）" as ctrlp {
+  [UserController]
+  [LearningController]
+  [RankingController]
+  [LoginInterceptor]
+  [Session（HttpSession）]
+}
+
+package "Service 层（service 包）" as svcp {
+  [UserService]
+  [LearningService]
+  [RankingService]
+}
+
+package "util 包" as utilp {
+  [CsvUtil]
+}
+
+package "Mapper 层（mapper 包）" as mapp {
+  [UserMapper]
+  [WordMapper]
+  [UserWordProgressMapper]
+  [LikeMapper]
+}
+
+package "Entity / DTO（entity、dto 包）" as edp {
+  [User、Word、UserWordProgress、Like]
+  [LoginRequest、RegisterRequest、AnswerRequest]
+}
+
+database "MySQL" as db {
+  [users]
+  [words]
+  [user_word_progress]
+  [likes]
+}
+
+browser --> viewp : HTTP 请求 / 响应
+viewp --> ctrlp : 表单提交 / 页面访问
+ctrlp --> svcp : 业务调用
+svcp --> mapp : 数据访问
+mapp --> db : SQL（MyBatis 映射）
+
+[LearningService] --> [CsvUtil] : parse(file)
+[UserController] --> [Session（HttpSession）] : setAttribute("userId", …)
+[LoginInterceptor] --> [Session（HttpSession）] : 检查登录态
+[LoginInterceptor] ..> viewp : 未登录请求重定向 redirect:/login
+
+svcp ..> edp : 数据对象传递
+mapp ..> edp : 实体映射
+
+note bottom of db
+  调用方向严格单向：View → Controller → Service → Mapper → DB，
+  原则上禁止 Controller → Mapper、JSP → DB 等越层调用
+end note
+@enduml

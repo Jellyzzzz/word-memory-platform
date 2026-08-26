@@ -1,0 +1,175 @@
+' 来源：《详细设计说明书》2.2.2 模块设计（MVC 资源命名、类设计）；《Spec》5.5 Entity、5.6 DTO
+@startuml 总体类图
+title 总体类图
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+
+package "controller" {
+  class UserController {
+    + login()
+    + register()
+    + logout()
+  }
+  class LearningController {
+    + learning()
+    + review()
+    + question()
+    + answer(AnswerRequest)
+    + markUnfamiliar(wordId)
+    + importWords(file)
+    + deleteWord(wordId)
+  }
+  class RankingController {
+    + ranking()
+    + like(toUserId)
+  }
+}
+
+package "interceptor" {
+  class LoginInterceptor {
+    + preHandle()
+  }
+}
+
+package "service" {
+  class UserService {
+    + register(username, password)
+    + login(username, password) : User
+    + checkUsernameUnique(username) : boolean
+  }
+  class LearningService {
+    + getLearningWords()
+    + getReviewWords()
+    + generateQuestion(mode)
+    + judgeAnswer(wordId, answer)
+    + updateProgress(userId, wordId, correct)
+    + markUnfamiliar(wordId)
+    + importWords(file, userId)
+    + listCustomWords(userId)
+    + deleteCustomWord(wordId)
+  }
+  class RankingService {
+    + getRanking()
+    + like(fromUserId, toUserId)
+  }
+}
+
+package "util" {
+  class CsvUtil {
+    + {static} parse(file)
+  }
+}
+
+package "mapper" {
+  interface UserMapper {
+    + findByUsername(username) : User
+    + insertUser(user) : int
+    + listRanking() : List<User>
+    + incrTotalLikes(userId) : int
+  }
+  interface WordMapper {
+    + findByStatus(status) : List<Word>
+    + findRandom() : Word
+    + insertWord(word) : int
+    + listCustomWords(ownerId) : List<Word>
+    + deleteCustomWord(wordId) : int
+  }
+  interface UserWordProgressMapper {
+    + insertProgress(progress) : int
+    + updateProgress(progress) : int
+  }
+  interface LikeMapper {
+    + checkLike(fromUserId, toUserId) : Like
+    + insertLike(like) : int
+  }
+}
+
+package "dto" {
+  class LoginRequest {
+    - username : String
+    - password : String
+  }
+  class RegisterRequest {
+    - username : String
+    - password : String
+    - confirmPassword : String
+  }
+  class AnswerRequest {
+    - wordId : int
+    - answer : String
+  }
+}
+
+package "entity" {
+  class User {
+    - userId : int
+    - username : String
+    - passwordHash : String
+    - salt : String
+    - score : int
+    - totalLikes : int
+    - createdAt : DateTime
+  }
+  class Word {
+    - wordId : int
+    - english : String
+    - chinese : String
+    - partOfSpeech : String
+    - source : String
+    - ownerId : int
+  }
+  class UserWordProgress {
+    - id : int
+    - userId : int
+    - wordId : int
+    - proficiency : int
+    - status : String
+  }
+  class Like {
+    - id : int
+    - fromUserId : int
+    - toUserId : int
+    - createdAt : DateTime
+  }
+}
+
+' 分层依赖关系
+UserController --> UserService
+LearningController --> LearningService
+RankingController --> RankingService
+UserService --> UserMapper
+LearningService --> WordMapper
+LearningService --> UserWordProgressMapper
+RankingService --> LikeMapper
+RankingService --> UserMapper
+LearningService --> CsvUtil
+
+' DTO 参数绑定
+UserController ..> LoginRequest : 参数绑定
+UserController ..> RegisterRequest : 参数绑定
+LearningController ..> AnswerRequest : 参数绑定
+
+' Mapper 与实体映射
+UserMapper ..> User : 实体映射
+WordMapper ..> Word : 实体映射
+UserWordProgressMapper ..> UserWordProgress : 实体映射
+LikeMapper ..> Like : 实体映射
+
+' 实体关系
+User "1" -- "0..*" UserWordProgress : 学习进度
+Word "1" -- "0..*" UserWordProgress : 学习进度
+User "1" -- "0..*" Word : 自定义单词归属\n（owner_id）
+User "1" -- "0..*" Like : 发起点赞\n（from_user_id）
+User "1" -- "0..*" Like : 收到点赞\n（to_user_id）
+
+note bottom of LoginInterceptor
+  统一拦截未登录请求，重定向 redirect:/login
+end note
+note bottom of Word
+  source 区分 builtin（owner_id=NULL）与 custom（owner_id=所属用户）
+end note
+note bottom of UserWordProgress
+  「用户 × 单词」多对多关联表，UNIQUE(user_id, word_id)，
+  承载 proficiency、status 两个学习状态
+end note
+@enduml

@@ -1,0 +1,39 @@
+' 来源：《详细设计说明书》1.2 非功能性需求、2.3 数据库设计；《Spec》3 技术栈
+@startuml 部署架构图
+title 部署架构图
+
+node "客户端" {
+  [PC 浏览器] as pc
+  [移动端浏览器（模拟器）] as mobile
+}
+
+artifact "CSV 单词文件（用户本地）" as csv
+
+node "应用服务器" {
+  artifact "单词记忆与竞技学习平台.war\n（Tomcat 部署）" as war {
+    [JSP 页面 + 静态资源（css / js）]
+    [Spring MVC 应用（Controller / Service / Mapper）]
+    [配置文件（database.properties、Mapper XML）]
+  }
+}
+
+node "数据库服务器" {
+  database "MySQL 5.7+ / 8.0\n（utf8mb4 · InnoDB）" as mysql {
+    [users]
+    [words]
+    [user_word_progress]
+    [likes]
+  }
+}
+
+pc --> war : HTTP
+mobile --> war : HTTP
+csv --> war : 文件上传（POST /words/import）
+war --> mysql : JDBC（MyBatis / SQL）
+
+note bottom of war
+  由 Maven 构建 WAR 包并部署至 Tomcat；
+  不引入 Docker、Redis、MQ 等额外中间件，
+  应用不设第三方外部接口
+end note
+@enduml
