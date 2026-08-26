@@ -46,4 +46,4 @@
 
    将 `target/word-memory-platform.war` 部署到 Tomcat 9。应用启动时只连接数据库，不会自动建表或写入初始化数据。
 
-业务开发约定为 `Controller -> Service -> Mapper`。详细业务规范见 `SPEC.md — 单词记忆与竞技学习平台 v0.3.md`。
+业务开发约定为 `Controller -> Service -> Mapper`。详细业务规范见 `SPEC.md`。
