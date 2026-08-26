@@ -11,7 +11,7 @@
 
 ## 本地启动
 
-1. 执行 `sql/schema.sql`，再执行 `sql/data.sql`。
+1. 在本机 MySQL 中创建名为 `word_memory_platform` 的数据库，并按团队共享的数据库结构建表。
 2. 将 `src/main/resources/database.properties.example` 复制为 `database.properties`，填写本机 MySQL 凭据（该文件已忽略）。
 3. 运行 `mvn clean package`，将 `target/word-memory-platform.war` 部署到 Tomcat 9。
 
