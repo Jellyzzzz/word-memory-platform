@@ -14,14 +14,20 @@
 准备 JDK 17+、Maven 3.9、MySQL 8 和 Tomcat 9，然后执行：
 
 1. 克隆仓库并进入项目目录。
-2. 登录 MySQL，依次执行数据库脚本：
+2. 在仓库根目录启动 MySQL 客户端：
 
-   ```sql
-   SOURCE D:/word-memory-platform/sql/schema.sql;
-   SOURCE D:/word-memory-platform/sql/data.sql;
+   ```powershell
+   mysql -u root -p
    ```
 
-   `schema.sql` 创建数据库和四张业务表，`data.sql` 写入可重复执行的内置单词数据。请将路径替换为新机器上的实际绝对路径。
+   登录后依次执行数据库脚本：
+
+   ```sql
+   SOURCE sql/schema.sql;
+   SOURCE sql/data.sql;
+   ```
+
+   相对路径以启动 MySQL 客户端时所在的仓库根目录为基准，因此与项目位于哪个磁盘或目录无关。`schema.sql` 创建数据库和四张业务表，`data.sql` 写入可重复执行的内置单词数据。
 
 3. 创建仅供本机使用的数据库配置：
 
