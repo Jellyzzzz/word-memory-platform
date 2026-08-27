@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wordmemory.platform.mapper.UserWordProgressMapper">
+
+    <insert id="insertProgress" parameterType="com.wordmemory.platform.entity.UserWordProgress"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_word_progress (user_id, word_id, proficiency, status)
+        VALUES (#{userId}, #{wordId}, #{proficiency}, #{status})
+    </insert>
+
+    <select id="findByUserAndWord" resultType="com.wordmemory.platform.entity.UserWordProgress">
+        SELECT id, user_id, word_id, proficiency, status
+        FROM user_word_progress
+        WHERE user_id = #{userId} AND word_id = #{wordId}
+    </select>
+
+    <select id="findWordsByUserAndStatus" resultType="com.wordmemory.platform.entity.Word">
+        SELECT w.word_id, w.english, w.chinese, w.part_of_speech, w.source, w.owner_id
+        FROM user_word_progress p
+        JOIN words w ON p.word_id = w.word_id
+        WHERE p.user_id = #{userId} AND p.status = #{status}
+    </select>
+
+    <update id="updateProgress" parameterType="com.wordmemory.platform.entity.UserWordProgress">
+        UPDATE user_word_progress
+        SET proficiency = #{proficiency}, status = #{status}
+        WHERE user_id = #{userId} AND word_id = #{wordId}
+    </update>
+
+</mapper>

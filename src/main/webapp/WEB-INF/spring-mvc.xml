@@ -18,6 +18,17 @@
     <!-- 开启 @Controller、@GetMapping 等 MVC 注解支持 -->
     <mvc:annotation-driven/>
 
+    <!-- 登录拦截：除登录/注册/静态资源外，统一要求已登录 -->
+    <mvc:interceptors>
+        <mvc:interceptor>
+            <mvc:mapping path="/**"/>
+            <mvc:exclude-mapping path="/login"/>
+            <mvc:exclude-mapping path="/register"/>
+            <mvc:exclude-mapping path="/static/**"/>
+            <bean class="com.wordmemory.platform.interceptor.LoginInterceptor"/>
+        </mvc:interceptor>
+    </mvc:interceptors>
+
     <!-- Let Tomcat serve static assets that are not handled by a controller. -->
     <mvc:default-servlet-handler/>
 
@@ -26,5 +37,9 @@
         <property name="prefix" value="/WEB-INF/views/"/>
         <property name="suffix" value=".jsp"/>
     </bean>
+
+    <!-- 文件上传解析（CSV 导入），基于 Servlet 3.0 标准，无额外依赖 -->
+    <bean id="multipartResolver"
+          class="org.springframework.web.multipart.support.StandardServletMultipartResolver"/>
 
 </beans>
