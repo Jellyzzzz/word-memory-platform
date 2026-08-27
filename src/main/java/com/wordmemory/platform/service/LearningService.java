@@ -3,6 +3,7 @@ package com.wordmemory.platform.service;
 import com.wordmemory.platform.dto.AnswerResult;
 import com.wordmemory.platform.dto.ImportResult;
 import com.wordmemory.platform.dto.Question;
+import com.wordmemory.platform.dto.WordProgress;
 import com.wordmemory.platform.entity.UserWordProgress;
 import com.wordmemory.platform.entity.Word;
 import com.wordmemory.platform.mapper.UserMapper;
@@ -85,6 +86,20 @@ public class LearningService {
         return question;
     }
 
+    /** 按 wordId 构造展示用题目（答题后回显单词）。 */
+    public Question getQuestionByWordId(int wordId) {
+        Word word = wordMapper.findById(wordId);
+        if (word == null) {
+            return null;
+        }
+        Question question = new Question();
+        question.setWordId(word.getWordId());
+        question.setEnglish(word.getEnglish());
+        question.setChinese(word.getChinese());
+        question.setPartOfSpeech(word.getPartOfSpeech());
+        return question;
+    }
+
     /** 判题：更新熟练度与积分，返回判题结果。 */
     @Transactional
     public AnswerResult judgeAnswer(Integer userId, String mode, int wordId, String answer) {
@@ -159,6 +174,14 @@ public class LearningService {
 
     public List<Word> listCustomWords(Integer userId) {
         return wordMapper.listCustomWords(userId);
+    }
+
+    public List<WordProgress> listBuiltinWordsWithProgress(Integer userId) {
+        return wordMapper.listBuiltinWithProgress(userId);
+    }
+
+    public List<WordProgress> listCustomWordsWithProgress(Integer userId) {
+        return wordMapper.listCustomWithProgress(userId);
     }
 
     /** 导入 CSV：逐行解析，成功写入自定义单词及其进度，返回成功/失败条数。 */

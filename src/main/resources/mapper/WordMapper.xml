@@ -40,4 +40,20 @@
         LIMIT #{limit}
     </select>
 
+    <select id="listBuiltinWithProgress" resultType="com.wordmemory.platform.dto.WordProgress">
+        SELECT w.word_id, w.english, w.chinese, w.part_of_speech,
+               COALESCE(p.proficiency, 0) AS proficiency
+        FROM words w
+        LEFT JOIN user_word_progress p ON p.word_id = w.word_id AND p.user_id = #{userId}
+        WHERE w.source = 'builtin'
+    </select>
+
+    <select id="listCustomWithProgress" resultType="com.wordmemory.platform.dto.WordProgress">
+        SELECT w.word_id, w.english, w.chinese, w.part_of_speech,
+               COALESCE(p.proficiency, 0) AS proficiency
+        FROM words w
+        LEFT JOIN user_word_progress p ON p.word_id = w.word_id AND p.user_id = #{userId}
+        WHERE w.source = 'custom' AND w.owner_id = #{userId}
+    </select>
+
 </mapper>

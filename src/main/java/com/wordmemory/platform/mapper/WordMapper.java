@@ -1,5 +1,6 @@
 package com.wordmemory.platform.mapper;
 
+import com.wordmemory.platform.dto.WordProgress;
 import com.wordmemory.platform.entity.Word;
 import org.apache.ibatis.annotations.Param;
 
@@ -27,4 +28,10 @@ public interface WordMapper {
 
     /** 随机取若干非当前单词，用于生成选择题干扰项。 */
     List<Word> findRandomWords(@Param("excludeWordId") Integer excludeWordId, @Param("limit") int limit);
+
+    /** 查询某用户全部内置单词及其熟练度。 */
+    List<WordProgress> listBuiltinWithProgress(@Param("userId") Integer userId);
+
+    /** 查询某用户自定义单词及其熟练度。 */
+    List<WordProgress> listCustomWithProgress(@Param("userId") Integer userId);
 }

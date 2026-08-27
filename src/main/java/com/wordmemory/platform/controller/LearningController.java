@@ -36,8 +36,8 @@ public class LearningController {
     @GetMapping("/words")
     public String library(HttpSession session, Model model) {
         Integer userId = (Integer) session.getAttribute("userId");
-        model.addAttribute("builtinWords", learningService.listBuiltinWords());
-        model.addAttribute("customWords", learningService.listCustomWords(userId));
+        model.addAttribute("builtinWords", learningService.listBuiltinWordsWithProgress(userId));
+        model.addAttribute("customWords", learningService.listCustomWordsWithProgress(userId));
         return "library";
     }
 
@@ -61,15 +61,18 @@ public class LearningController {
 
     @PostMapping("/learning/answer")
     public String answer(@ModelAttribute AnswerRequest request, @RequestParam("mode") String mode,
-                         HttpSession session, RedirectAttributes redirectAttributes) {
+                         HttpSession session, Model model) {
         Integer userId = (Integer) session.getAttribute("userId");
+        AnswerResult result = null;
         try {
-            AnswerResult result = learningService.judgeAnswer(userId, mode, request.getWordId(), request.getAnswer());
-            redirectAttributes.addFlashAttribute("result", result);
+            result = learningService.judgeAnswer(userId, mode, request.getWordId(), request.getAnswer());
         } catch (IllegalArgumentException e) {
-            redirectAttributes.addFlashAttribute("error", e.getMessage());
+            model.addAttribute("error", e.getMessage());
         }
-        return "redirect:/" + (LearningService.MODE_REVIEW.equals(mode) ? "review" : "learning");
+        model.addAttribute("question", learningService.getQuestionByWordId(request.getWordId()));
+        model.addAttribute("result", result);
+        model.addAttribute("mode", mode);
+        return LearningService.MODE_REVIEW.equals(mode) ? "review" : "learning";
     }
 
     @PostMapping("/learning/mark-unfamiliar")
@@ -79,6 +82,16 @@ public class LearningController {
         learningService.markUnfamiliar(userId, wordId);
         redirectAttributes.addFlashAttribute("message", "已标记为不熟练");
         return "redirect:/review";
+    }
+
+    /** 重新学习：将单词熟练度清零，回到学习池。 */
+    @PostMapping("/words/relearn")
+    public String relearn(@RequestParam("wordId") int wordId, HttpSession session,
+                          RedirectAttributes redirectAttributes) {
+        Integer userId = (Integer) session.getAttribute("userId");
+        learningService.markUnfamiliar(userId, wordId);
+        redirectAttributes.addFlashAttribute("message", "已重新学习");
+        return "redirect:/words";
     }
 
     @PostMapping("/words/import")

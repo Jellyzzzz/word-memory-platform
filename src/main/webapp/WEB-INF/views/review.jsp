@@ -28,13 +28,27 @@
         <c:if test="${not empty error}">
             <div class="alert alert-danger">${error}</div>
         </c:if>
-        <c:if test="${not empty result}">
-            <div class="alert ${result.correct ? 'alert-success' : 'alert-danger'}">
-                ${result.correct ? '回答正确' : '回答错误'}，正确答案：${result.correctAnswer}，熟练度：${result.proficiency}
-            </div>
-        </c:if>
-
         <c:choose>
+            <c:when test="${not empty result}">
+                <div class="card">
+                    <div class="card-header">复习模式</div>
+                    <div class="card-body">
+                        <p class="fs-4">${question.english} <span class="text-muted fs-6">${question.chinese}</span></p>
+                        <c:if test="${not empty question.partOfSpeech}">
+                            <span class="badge bg-secondary">${question.partOfSpeech}</span>
+                        </c:if>
+                        <c:choose>
+                            <c:when test="${result.correct}">
+                                <div class="alert alert-success mt-3 mb-3">回答正确</div>
+                            </c:when>
+                            <c:otherwise>
+                                <div class="alert alert-danger mt-3 mb-3">回答错误，正确答案：${result.correctAnswer}</div>
+                            </c:otherwise>
+                        </c:choose>
+                        <a href="<c:url value='/review'/>" class="btn btn-primary w-100">下一个</a>
+                    </div>
+                </div>
+            </c:when>
             <c:when test="${empty question}">
                 <div class="alert alert-info text-center py-5">暂无待复习单词</div>
             </c:when>

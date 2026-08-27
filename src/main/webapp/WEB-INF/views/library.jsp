@@ -48,7 +48,7 @@
         <div class="card-body">
             <table class="table table-striped align-middle">
                 <thead>
-                <tr><th>英文</th><th>中文</th><th>词性</th></tr>
+                <tr><th>英文</th><th>中文</th><th>词性</th><th>熟练度</th><th>操作</th></tr>
                 </thead>
                 <tbody>
                 <c:forEach var="word" items="${builtinWords}">
@@ -56,6 +56,13 @@
                         <td>${word.english}</td>
                         <td>${word.chinese}</td>
                         <td>${word.partOfSpeech}</td>
+                        <td><span class="badge ${word.proficiency >= 3 ? 'bg-success' : 'bg-secondary'}">${word.proficiency}</span></td>
+                        <td>
+                            <form action="<c:url value='/words/relearn'/>" method="post" class="d-inline">
+                                <input type="hidden" name="wordId" value="${word.wordId}">
+                                <button type="submit" class="btn btn-sm btn-outline-warning">重新学习</button>
+                            </form>
+                        </td>
                     </tr>
                 </c:forEach>
                 </tbody>
@@ -73,7 +80,7 @@
                 <c:otherwise>
                     <table class="table table-striped align-middle">
                         <thead>
-                        <tr><th>英文</th><th>中文</th><th>词性</th><th>操作</th></tr>
+                        <tr><th>英文</th><th>中文</th><th>词性</th><th>熟练度</th><th>操作</th></tr>
                         </thead>
                         <tbody>
                         <c:forEach var="word" items="${customWords}">
@@ -81,7 +88,12 @@
                                 <td>${word.english}</td>
                                 <td>${word.chinese}</td>
                                 <td>${word.partOfSpeech}</td>
+                                <td><span class="badge ${word.proficiency >= 3 ? 'bg-success' : 'bg-secondary'}">${word.proficiency}</span></td>
                                 <td>
+                                    <form action="<c:url value='/words/relearn'/>" method="post" class="d-inline">
+                                        <input type="hidden" name="wordId" value="${word.wordId}">
+                                        <button type="submit" class="btn btn-sm btn-outline-warning">重新学习</button>
+                                    </form>
                                     <form action="<c:url value='/words/delete'/>" method="post" class="d-inline">
                                         <input type="hidden" name="wordId" value="${word.wordId}">
                                         <button type="submit" class="btn btn-sm btn-danger">删除</button>
