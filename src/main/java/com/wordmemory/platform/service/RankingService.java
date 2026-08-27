@@ -5,6 +5,8 @@ import com.wordmemory.platform.entity.User;
 import com.wordmemory.platform.mapper.LikeMapper;
 import com.wordmemory.platform.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,16 +37,27 @@ public class RankingService {
     /** 点赞：写入点赞记录并累加目标用户获赞数，事务保证原子性。 */
     @Transactional
     public void like(Integer fromUserId, Integer toUserId) {
+        if (fromUserId == null || toUserId == null) {
+            throw new IllegalArgumentException("用户信息无效");
+        }
         if (fromUserId.equals(toUserId)) {
             throw new IllegalArgumentException("不能给自己点赞");
         }
-        if (likeMapper.checkLike(fromUserId, toUserId) != null) {
-            throw new IllegalArgumentException("您已经点过赞了");
+        if (userMapper.findById(toUserId) == null) {
+            throw new IllegalArgumentException("目标用户不存在");
         }
         Like like = new Like();
         like.setFromUserId(fromUserId);
         like.setToUserId(toUserId);
-        likeMapper.insertLike(like);
-        userMapper.incrTotalLikes(toUserId);
+        try {
+            likeMapper.insertLike(like);
+        } catch (DuplicateKeyException e) {
+            throw new IllegalArgumentException("您已经点过赞了", e);
+        } catch (DataIntegrityViolationException e) {
+            throw new IllegalArgumentException("用户状态已变化，请刷新排行榜后重试", e);
+        }
+        if (userMapper.incrTotalLikes(toUserId) != 1) {
+            throw new IllegalArgumentException("目标用户不存在");
+        }
     }
 }

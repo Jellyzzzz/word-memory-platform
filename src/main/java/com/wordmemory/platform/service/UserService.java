@@ -8,6 +8,7 @@ import com.wordmemory.platform.mapper.UserWordProgressMapper;
 import com.wordmemory.platform.mapper.WordMapper;
 import com.wordmemory.platform.util.PasswordUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,7 @@ import java.util.List;
 public class UserService {
 
     private static final String STATUS_LEARNING = "learning";
+    private static final int MAX_USERNAME_LENGTH = 50;
 
     @Autowired
     private UserMapper userMapper;
@@ -37,6 +39,9 @@ public class UserService {
         if (name.isEmpty()) {
             throw new IllegalArgumentException("用户名不能为空");
         }
+        if (name.codePointCount(0, name.length()) > MAX_USERNAME_LENGTH) {
+            throw new IllegalArgumentException("用户名不能超过 50 个字符");
+        }
         if (password == null || password.length() < 6) {
             throw new IllegalArgumentException("密码长度不能少于 6 位");
         }
@@ -49,7 +54,11 @@ public class UserService {
         user.setUsername(name);
         user.setSalt(salt);
         user.setPasswordHash(PasswordUtil.hash(salt, password));
-        userMapper.insertUser(user);
+        try {
+            userMapper.insertUser(user);
+        } catch (DuplicateKeyException e) {
+            throw new IllegalArgumentException("用户名已存在", e);
+        }
 
         initProgress(user.getUserId());
         return user;

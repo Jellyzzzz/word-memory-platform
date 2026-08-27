@@ -14,14 +14,20 @@
     <div class="container">
         <a class="navbar-brand" href="<c:url value='/home'/>">单词记忆平台</a>
         <span class="navbar-text ms-auto">
-            ${sessionScope.username}
-            <a class="btn btn-sm btn-outline-light ms-2" href="<c:url value='/logout'/>">退出</a>
+            <c:out value="${sessionScope.username}"/>
+            <form action="<c:url value='/logout'/>" method="post" class="d-inline ms-2">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                <button type="submit" class="btn btn-sm btn-outline-light">退出</button>
+            </form>
         </span>
     </div>
 </nav>
 <div class="container">
+    <c:if test="${not empty error}">
+        <div class="alert alert-danger"><c:out value="${error}"/></div>
+    </c:if>
     <div class="p-4 mb-4 bg-white rounded shadow-sm text-center">
-        <h2>欢迎，${sessionScope.username}</h2>
+        <h2>欢迎，<c:out value="${sessionScope.username}"/></h2>
         <p class="text-muted mb-0">选择一个模式开始学习</p>
     </div>
 

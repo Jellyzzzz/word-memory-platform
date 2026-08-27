@@ -15,17 +15,20 @@
         <a class="navbar-brand" href="<c:url value='/home'/>">单词记忆平台</a>
         <a class="btn btn-sm btn-outline-light ms-2" href="<c:url value='/home'/>">返回首页</a>
         <span class="navbar-text ms-auto">
-            ${sessionScope.username}
-            <a class="btn btn-sm btn-outline-light ms-2" href="<c:url value='/logout'/>">退出</a>
+            <c:out value="${sessionScope.username}"/>
+            <form action="<c:url value='/logout'/>" method="post" class="d-inline ms-2">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                <button type="submit" class="btn btn-sm btn-outline-light">退出</button>
+            </form>
         </span>
     </div>
 </nav>
 <div class="container">
     <c:if test="${not empty message}">
-        <div class="alert alert-success">${message}</div>
+        <div class="alert alert-success"><c:out value="${message}"/></div>
     </c:if>
     <c:if test="${not empty error}">
-        <div class="alert alert-danger">${error}</div>
+        <div class="alert alert-danger"><c:out value="${error}"/></div>
     </c:if>
     <c:if test="${not empty importResult}">
         <div class="alert alert-success">导入完成：成功 ${importResult.success} 条，失败 ${importResult.failed} 条</div>
@@ -37,6 +40,7 @@
             <p class="text-muted">格式：english,chinese[,part_of_speech]，每行一条，UTF-8 编码。例：apple,苹果,n.</p>
             <form action="<c:url value='/words/import'/>" method="post" enctype="multipart/form-data"
                   class="d-flex gap-2">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="file" name="file" accept=".csv" class="form-control" required>
                 <button type="submit" class="btn btn-primary">导入</button>
             </form>
@@ -53,12 +57,13 @@
                 <tbody>
                 <c:forEach var="word" items="${builtinWords}">
                     <tr>
-                        <td>${word.english}</td>
-                        <td>${word.chinese}</td>
-                        <td>${word.partOfSpeech}</td>
+                        <td><c:out value="${word.english}"/></td>
+                        <td><c:out value="${word.chinese}"/></td>
+                        <td><c:out value="${word.partOfSpeech}"/></td>
                         <td><span class="badge ${word.proficiency >= 3 ? 'bg-success' : 'bg-secondary'}">${word.proficiency}</span></td>
                         <td>
                             <form action="<c:url value='/words/relearn'/>" method="post" class="d-inline">
+                                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                 <input type="hidden" name="wordId" value="${word.wordId}">
                                 <button type="submit" class="btn btn-sm btn-outline-warning">重新学习</button>
                             </form>
@@ -85,16 +90,18 @@
                         <tbody>
                         <c:forEach var="word" items="${customWords}">
                             <tr>
-                                <td>${word.english}</td>
-                                <td>${word.chinese}</td>
-                                <td>${word.partOfSpeech}</td>
+                                <td><c:out value="${word.english}"/></td>
+                                <td><c:out value="${word.chinese}"/></td>
+                                <td><c:out value="${word.partOfSpeech}"/></td>
                                 <td><span class="badge ${word.proficiency >= 3 ? 'bg-success' : 'bg-secondary'}">${word.proficiency}</span></td>
                                 <td>
                                     <form action="<c:url value='/words/relearn'/>" method="post" class="d-inline">
+                                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                         <input type="hidden" name="wordId" value="${word.wordId}">
                                         <button type="submit" class="btn btn-sm btn-outline-warning">重新学习</button>
                                     </form>
                                     <form action="<c:url value='/words/delete'/>" method="post" class="d-inline">
+                                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                         <input type="hidden" name="wordId" value="${word.wordId}">
                                         <button type="submit" class="btn btn-sm btn-danger">删除</button>
                                     </form>

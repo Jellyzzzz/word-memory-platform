@@ -17,6 +17,9 @@ public interface WordMapper {
     /** 按主键查询。 */
     Word findById(Integer wordId);
 
+    /** 查询当前用户可访问的单词：内置单词或本人自定义单词。 */
+    Word findAccessibleById(@Param("userId") Integer userId, @Param("wordId") Integer wordId);
+
     /** 插入单词，回填自增 wordId。 */
     int insertWord(Word word);
 

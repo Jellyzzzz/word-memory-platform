@@ -17,9 +17,10 @@
                 <div class="card-body p-4">
                     <h3 class="text-center mb-4">单词记忆平台</h3>
                     <c:if test="${not empty error}">
-                        <div class="alert alert-danger py-2">${error}</div>
+                        <div class="alert alert-danger py-2"><c:out value="${error}"/></div>
                     </c:if>
                     <form action="<c:url value='/login'/>" method="post">
+                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                         <div class="mb-3">
                             <label class="form-label">用户名</label>
                             <input type="text" name="username" class="form-control" required autofocus>

@@ -15,11 +15,20 @@
         WHERE user_id = #{userId} AND word_id = #{wordId}
     </select>
 
+    <select id="findByUserAndWordForUpdate" resultType="com.wordmemory.platform.entity.UserWordProgress">
+        SELECT id, user_id, word_id, proficiency, status
+        FROM user_word_progress
+        WHERE user_id = #{userId} AND word_id = #{wordId}
+        FOR UPDATE
+    </select>
+
     <select id="findWordsByUserAndStatus" resultType="com.wordmemory.platform.entity.Word">
         SELECT w.word_id, w.english, w.chinese, w.part_of_speech, w.source, w.owner_id
         FROM user_word_progress p
         JOIN words w ON p.word_id = w.word_id
-        WHERE p.user_id = #{userId} AND p.status = #{status}
+        WHERE p.user_id = #{userId}
+          AND p.status = #{status}
+          AND (w.source = 'builtin' OR (w.source = 'custom' AND w.owner_id = #{userId}))
     </select>
 
     <update id="updateProgress" parameterType="com.wordmemory.platform.entity.UserWordProgress">

@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -15,34 +16,37 @@
         <a class="navbar-brand" href="<c:url value='/home'/>">单词记忆平台</a>
         <a class="btn btn-sm btn-outline-light ms-2" href="<c:url value='/home'/>">返回首页</a>
         <span class="navbar-text ms-auto">
-            ${sessionScope.username}
-            <a class="btn btn-sm btn-outline-light ms-2" href="<c:url value='/logout'/>">退出</a>
+            <c:out value="${sessionScope.username}"/>
+            <form action="<c:url value='/logout'/>" method="post" class="d-inline ms-2">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                <button type="submit" class="btn btn-sm btn-outline-light">退出</button>
+            </form>
         </span>
     </div>
 </nav>
 <div class="container">
     <div class="quiz-card mx-auto">
         <c:if test="${not empty message}">
-            <div class="alert alert-success">${message}</div>
+            <div class="alert alert-success"><c:out value="${message}"/></div>
         </c:if>
         <c:if test="${not empty error}">
-            <div class="alert alert-danger">${error}</div>
+            <div class="alert alert-danger"><c:out value="${error}"/></div>
         </c:if>
         <c:choose>
             <c:when test="${not empty result}">
                 <div class="card">
                     <div class="card-header">复习模式</div>
                     <div class="card-body">
-                        <p class="fs-4">${question.english} <span class="text-muted fs-6">${question.chinese}</span></p>
+                        <p class="fs-4"><c:out value="${question.english}"/> <span class="text-muted fs-6"><c:out value="${question.chinese}"/></span></p>
                         <c:if test="${not empty question.partOfSpeech}">
-                            <span class="badge bg-secondary">${question.partOfSpeech}</span>
+                            <span class="badge bg-secondary"><c:out value="${question.partOfSpeech}"/></span>
                         </c:if>
                         <c:choose>
                             <c:when test="${result.correct}">
                                 <div class="alert alert-success mt-3 mb-3">回答正确</div>
                             </c:when>
                             <c:otherwise>
-                                <div class="alert alert-danger mt-3 mb-3">回答错误，正确答案：${result.correctAnswer}</div>
+                                <div class="alert alert-danger mt-3 mb-3">回答错误，正确答案：<c:out value="${result.correctAnswer}"/></div>
                             </c:otherwise>
                         </c:choose>
                         <a href="<c:url value='/review'/>" class="btn btn-primary w-100">下一个</a>
@@ -57,26 +61,26 @@
                     <div class="card-header">复习模式</div>
                     <div class="card-body">
                         <form action="<c:url value='/learning/answer'/>" method="post">
-                            <input type="hidden" name="wordId" value="${question.wordId}">
-                            <input type="hidden" name="mode" value="review">
+                            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                            <input type="hidden" name="questionToken" value="${questionToken}">
                             <c:choose>
                                 <c:when test="${question.type == 'choice'}">
-                                    <p class="fs-5">请选择「${question.english}」的中文释义</p>
+                                    <p class="fs-5">请选择「<c:out value="${question.english}"/>」的中文释义</p>
                                     <c:if test="${not empty question.partOfSpeech}">
-                                        <span class="badge bg-secondary mb-2">${question.partOfSpeech}</span>
+                                        <span class="badge bg-secondary mb-2"><c:out value="${question.partOfSpeech}"/></span>
                                     </c:if>
                                     <div class="option-list mt-2">
                                         <c:forEach var="opt" items="${question.options}">
                                             <label>
-                                                <input type="radio" name="answer" value="${opt}" required> ${opt}
+                                                <input type="radio" name="answer" value="${fn:escapeXml(opt)}" required> <c:out value="${opt}"/>
                                             </label>
                                         </c:forEach>
                                     </div>
                                 </c:when>
                                 <c:otherwise>
-                                    <p class="fs-5">请输入「${question.chinese}」对应的英文单词</p>
+                                    <p class="fs-5">请输入「<c:out value="${question.chinese}"/>」对应的英文单词</p>
                                     <c:if test="${not empty question.partOfSpeech}">
-                                        <span class="badge bg-secondary mb-2">${question.partOfSpeech}</span>
+                                        <span class="badge bg-secondary mb-2"><c:out value="${question.partOfSpeech}"/></span>
                                     </c:if>
                                     <input type="text" name="answer" class="form-control" required autocomplete="off">
                                 </c:otherwise>
@@ -84,7 +88,8 @@
                             <button type="submit" class="btn btn-primary mt-3 w-100">提交</button>
                         </form>
                         <form action="<c:url value='/learning/mark-unfamiliar'/>" method="post" class="mt-2">
-                            <input type="hidden" name="wordId" value="${question.wordId}">
+                            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                            <input type="hidden" name="questionToken" value="${questionToken}">
                             <button type="submit" class="btn btn-outline-warning w-100">标记为不熟练</button>
                         </form>
                     </div>

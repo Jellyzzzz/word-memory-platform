@@ -4,7 +4,11 @@ import com.wordmemory.platform.dto.AnswerRequest;
 import com.wordmemory.platform.dto.AnswerResult;
 import com.wordmemory.platform.dto.ImportResult;
 import com.wordmemory.platform.dto.Question;
+import com.wordmemory.platform.dto.QuestionAttempt;
 import com.wordmemory.platform.service.LearningService;
+import com.wordmemory.platform.util.QuestionAttemptStore;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -22,6 +26,8 @@ import javax.servlet.http.HttpSession;
  */
 @Controller
 public class LearningController {
+
+    private static final Log LOGGER = LogFactory.getLog(LearningController.class);
 
     @Autowired
     private LearningService learningService;
@@ -46,7 +52,11 @@ public class LearningController {
         Integer userId = (Integer) session.getAttribute("userId");
         Question question = learningService.generateQuestion(userId, LearningService.MODE_LEARNING);
         model.addAttribute("question", question);
-        model.addAttribute("mode", "learning");
+        if (question != null) {
+            QuestionAttempt attempt = QuestionAttemptStore.issue(
+                    session, question, LearningService.MODE_LEARNING);
+            model.addAttribute("questionToken", attempt.getToken());
+        }
         return "learning";
     }
 
@@ -55,32 +65,59 @@ public class LearningController {
         Integer userId = (Integer) session.getAttribute("userId");
         Question question = learningService.generateQuestion(userId, LearningService.MODE_REVIEW);
         model.addAttribute("question", question);
-        model.addAttribute("mode", "review");
+        if (question != null) {
+            QuestionAttempt attempt = QuestionAttemptStore.issue(
+                    session, question, LearningService.MODE_REVIEW);
+            model.addAttribute("questionToken", attempt.getToken());
+        }
         return "review";
     }
 
     @PostMapping("/learning/answer")
-    public String answer(@ModelAttribute AnswerRequest request, @RequestParam("mode") String mode,
-                         HttpSession session, Model model) {
+    public String answer(@ModelAttribute AnswerRequest request,
+                         @RequestParam("questionToken") String questionToken,
+                         HttpSession session, Model model, RedirectAttributes redirectAttributes) {
         Integer userId = (Integer) session.getAttribute("userId");
-        AnswerResult result = null;
-        try {
-            result = learningService.judgeAnswer(userId, mode, request.getWordId(), request.getAnswer());
-        } catch (IllegalArgumentException e) {
-            model.addAttribute("error", e.getMessage());
+        QuestionAttempt attempt = QuestionAttemptStore.consume(session, questionToken);
+        if (attempt == null) {
+            redirectAttributes.addFlashAttribute("error", "题目已失效或已提交，请重新获取题目");
+            return "redirect:/home";
         }
-        model.addAttribute("question", learningService.getQuestionByWordId(request.getWordId()));
-        model.addAttribute("result", result);
-        model.addAttribute("mode", mode);
-        return LearningService.MODE_REVIEW.equals(mode) ? "review" : "learning";
+
+        String view = LearningService.MODE_REVIEW.equals(attempt.getMode()) ? "review" : "learning";
+        try {
+            AnswerResult result = learningService.judgeAnswer(
+                    userId,
+                    attempt.getMode(),
+                    attempt.getQuestionType(),
+                    attempt.getWordId(),
+                    request.getAnswer()
+            );
+            model.addAttribute("question",
+                    learningService.getQuestionByWordId(userId, attempt.getWordId()));
+            model.addAttribute("result", result);
+            return view;
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+            return "redirect:/" + view;
+        }
     }
 
     @PostMapping("/learning/mark-unfamiliar")
-    public String markUnfamiliar(@RequestParam("wordId") int wordId, HttpSession session,
+    public String markUnfamiliar(@RequestParam("questionToken") String questionToken, HttpSession session,
                                  RedirectAttributes redirectAttributes) {
         Integer userId = (Integer) session.getAttribute("userId");
-        learningService.markUnfamiliar(userId, wordId);
-        redirectAttributes.addFlashAttribute("message", "已标记为不熟练");
+        QuestionAttempt attempt = QuestionAttemptStore.consume(session, questionToken);
+        if (attempt == null || !LearningService.MODE_REVIEW.equals(attempt.getMode())) {
+            redirectAttributes.addFlashAttribute("error", "题目已失效，请重新获取题目");
+            return "redirect:/review";
+        }
+        try {
+            learningService.markUnfamiliar(userId, attempt.getWordId());
+            redirectAttributes.addFlashAttribute("message", "已标记为不熟练");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
         return "redirect:/review";
     }
 
@@ -89,8 +126,12 @@ public class LearningController {
     public String relearn(@RequestParam("wordId") int wordId, HttpSession session,
                           RedirectAttributes redirectAttributes) {
         Integer userId = (Integer) session.getAttribute("userId");
-        learningService.markUnfamiliar(userId, wordId);
-        redirectAttributes.addFlashAttribute("message", "已重新学习");
+        try {
+            learningService.markUnfamiliar(userId, wordId);
+            redirectAttributes.addFlashAttribute("message", "已重新学习");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
         return "redirect:/words";
     }
 
@@ -105,8 +146,11 @@ public class LearningController {
         try {
             ImportResult result = learningService.importWords(file.getInputStream(), userId);
             redirectAttributes.addFlashAttribute("importResult", result);
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "导入失败：" + e.getMessage());
+            LOGGER.error("CSV import failed for user " + userId, e);
+            redirectAttributes.addFlashAttribute("error", "导入失败，请检查文件格式后重试");
         }
         return "redirect:/words";
     }

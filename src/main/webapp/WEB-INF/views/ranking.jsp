@@ -15,17 +15,20 @@
         <a class="navbar-brand" href="<c:url value='/home'/>">单词记忆平台</a>
         <a class="btn btn-sm btn-outline-light ms-2" href="<c:url value='/home'/>">返回首页</a>
         <span class="navbar-text ms-auto">
-            ${sessionScope.username}
-            <a class="btn btn-sm btn-outline-light ms-2" href="<c:url value='/logout'/>">退出</a>
+            <c:out value="${sessionScope.username}"/>
+            <form action="<c:url value='/logout'/>" method="post" class="d-inline ms-2">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                <button type="submit" class="btn btn-sm btn-outline-light">退出</button>
+            </form>
         </span>
     </div>
 </nav>
 <div class="container">
     <c:if test="${not empty message}">
-        <div class="alert alert-success">${message}</div>
+        <div class="alert alert-success"><c:out value="${message}"/></div>
     </c:if>
     <c:if test="${not empty error}">
-        <div class="alert alert-danger">${error}</div>
+        <div class="alert alert-danger"><c:out value="${error}"/></div>
     </c:if>
 
     <div class="card">
@@ -39,7 +42,7 @@
                 <c:forEach var="user" items="${ranking}" varStatus="st">
                     <tr>
                         <td>${st.index + 1}</td>
-                        <td>${user.username}</td>
+                        <td><c:out value="${user.username}"/></td>
                         <td>${user.score}</td>
                         <td>${user.totalLikes}</td>
                         <td>
@@ -52,6 +55,7 @@
                                 </c:when>
                                 <c:otherwise>
                                     <form action="<c:url value='/ranking/like'/>" method="post" class="d-inline">
+                                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                         <input type="hidden" name="toUserId" value="${user.userId}">
                                         <button type="submit" class="btn btn-sm btn-primary">点赞</button>
                                     </form>

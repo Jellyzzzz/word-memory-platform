@@ -32,6 +32,8 @@ public class LearningService {
 
     public static final String MODE_LEARNING = "learning";
     public static final String MODE_REVIEW = "review";
+    public static final String TYPE_CHOICE = "choice";
+    public static final String TYPE_BLANK = "blank";
 
     private static final String STATUS_LEARNING = "learning";
     private static final String STATUS_MASTERED = "mastered";
@@ -58,7 +60,8 @@ public class LearningService {
 
     /** 从指定模式的单词池随机取词，生成选择题或填空题；池为空返回 null。 */
     public Question generateQuestion(Integer userId, String mode) {
-        List<Word> pool = MODE_LEARNING.equals(mode) ? getLearningWords(userId) : getReviewWords(userId);
+        String status = statusForMode(mode);
+        List<Word> pool = progressMapper.findWordsByUserAndStatus(userId, status);
         if (pool.isEmpty()) {
             return null;
         }
@@ -71,7 +74,7 @@ public class LearningService {
         question.setPartOfSpeech(target.getPartOfSpeech());
 
         if (ThreadLocalRandom.current().nextBoolean()) {
-            question.setType("choice");
+            question.setType(TYPE_CHOICE);
             List<Word> distractors = wordMapper.findRandomWords(target.getWordId(), DISTRACTOR_COUNT);
             List<String> options = new ArrayList<>();
             for (Word d : distractors) {
@@ -81,14 +84,14 @@ public class LearningService {
             Collections.shuffle(options);
             question.setOptions(options);
         } else {
-            question.setType("blank");
+            question.setType(TYPE_BLANK);
         }
         return question;
     }
 
     /** 按 wordId 构造展示用题目（答题后回显单词）。 */
-    public Question getQuestionByWordId(int wordId) {
-        Word word = wordMapper.findById(wordId);
+    public Question getQuestionByWordId(Integer userId, int wordId) {
+        Word word = wordMapper.findAccessibleById(userId, wordId);
         if (word == null) {
             return null;
         }
@@ -102,38 +105,37 @@ public class LearningService {
 
     /** 判题：更新熟练度与积分，返回判题结果。 */
     @Transactional
-    public AnswerResult judgeAnswer(Integer userId, String mode, int wordId, String answer) {
-        Word word = wordMapper.findById(wordId);
-        if (word == null) {
-            throw new IllegalArgumentException("题目不存在");
-        }
-        boolean correct = isCorrect(word, answer);
-        updateProgress(userId, wordId, correct, mode);
-        if (correct) {
-            userMapper.addScore(userId, 1);
+    public AnswerResult judgeAnswer(Integer userId, String mode, String questionType, int wordId, String answer) {
+        String expectedStatus = statusForMode(mode);
+        validateQuestionType(questionType);
+
+        UserWordProgress progress = progressMapper.findByUserAndWordForUpdate(userId, wordId);
+        if (progress == null || !expectedStatus.equals(progress.getStatus())) {
+            throw new IllegalArgumentException("题目已失效，请获取新题目");
         }
 
-        UserWordProgress updated = progressMapper.findByUserAndWord(userId, wordId);
+        Word word = wordMapper.findAccessibleById(userId, wordId);
+        if (word == null) {
+            throw new IllegalArgumentException("题目不存在或无权访问");
+        }
+        boolean correct = isCorrect(word, answer, questionType);
+        updateProgress(progress, correct, mode);
+        if (correct) {
+            if (userMapper.addScore(userId, 1) != 1) {
+                throw new IllegalArgumentException("登录状态已失效");
+            }
+        }
+
         AnswerResult result = new AnswerResult();
         result.setCorrect(correct);
         result.setCorrectAnswer(word.getEnglish() + "（" + word.getChinese() + "）");
-        result.setProficiency(updated.getProficiency());
-        result.setStatus(updated.getStatus());
+        result.setProficiency(progress.getProficiency());
+        result.setStatus(progress.getStatus());
         return result;
     }
 
     /** 按熟练度规则更新进度：学习答对 +1、复习答对 +1/答错 -1，熟练度 >=3 转 mastered。 */
-    public void updateProgress(Integer userId, int wordId, boolean correct, String mode) {
-        UserWordProgress progress = progressMapper.findByUserAndWord(userId, wordId);
-        if (progress == null) {
-            progress = new UserWordProgress();
-            progress.setUserId(userId);
-            progress.setWordId(wordId);
-            progress.setProficiency(0);
-            progress.setStatus(STATUS_LEARNING);
-            progressMapper.insertProgress(progress);
-        }
-
+    private void updateProgress(UserWordProgress progress, boolean correct, String mode) {
         int proficiency = progress.getProficiency();
         if (MODE_LEARNING.equals(mode)) {
             if (correct) {
@@ -147,25 +149,24 @@ public class LearningService {
         String status = proficiency >= MASTERED_THRESHOLD ? STATUS_MASTERED : STATUS_LEARNING;
         progress.setProficiency(proficiency);
         progress.setStatus(status);
-        progressMapper.updateProgress(progress);
+        if (progressMapper.updateProgress(progress) != 1) {
+            throw new IllegalArgumentException("学习进度更新失败");
+        }
     }
 
     /** 标记为不熟练：熟练度归零、回到 learning 池。 */
     @Transactional
     public void markUnfamiliar(Integer userId, int wordId) {
-        UserWordProgress progress = progressMapper.findByUserAndWord(userId, wordId);
-        if (progress == null) {
-            progress = new UserWordProgress();
-            progress.setUserId(userId);
-            progress.setWordId(wordId);
-            progress.setProficiency(0);
-            progress.setStatus(STATUS_LEARNING);
-            progressMapper.insertProgress(progress);
-            return;
+        UserWordProgress progress = progressMapper.findByUserAndWordForUpdate(userId, wordId);
+        Word word = wordMapper.findAccessibleById(userId, wordId);
+        if (progress == null || word == null) {
+            throw new IllegalArgumentException("单词不存在或无权访问");
         }
         progress.setProficiency(0);
         progress.setStatus(STATUS_LEARNING);
-        progressMapper.updateProgress(progress);
+        if (progressMapper.updateProgress(progress) != 1) {
+            throw new IllegalArgumentException("学习进度更新失败");
+        }
     }
 
     public List<Word> listBuiltinWords() {
@@ -191,7 +192,17 @@ public class LearningService {
         int failed = 0;
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
             String line;
+            boolean headerAllowed = true;
             while ((line = reader.readLine()) != null) {
+                if (CsvUtil.isBlankLine(line)) {
+                    failed++;
+                    continue;
+                }
+                if (headerAllowed && CsvUtil.isHeader(line)) {
+                    headerAllowed = false;
+                    continue;
+                }
+                headerAllowed = false;
                 Word word = CsvUtil.parseLine(line);
                 if (word == null) {
                     failed++;
@@ -224,11 +235,30 @@ public class LearningService {
         }
     }
 
-    private boolean isCorrect(Word word, String answer) {
+    private boolean isCorrect(Word word, String answer, String questionType) {
         if (answer == null) {
             return false;
         }
         String a = answer.trim();
-        return a.equalsIgnoreCase(word.getEnglish()) || a.equals(word.getChinese());
+        if (TYPE_CHOICE.equals(questionType)) {
+            return a.equals(word.getChinese());
+        }
+        return a.equalsIgnoreCase(word.getEnglish());
+    }
+
+    private String statusForMode(String mode) {
+        if (MODE_LEARNING.equals(mode)) {
+            return STATUS_LEARNING;
+        }
+        if (MODE_REVIEW.equals(mode)) {
+            return STATUS_MASTERED;
+        }
+        throw new IllegalArgumentException("无效的学习模式");
+    }
+
+    private void validateQuestionType(String questionType) {
+        if (!TYPE_CHOICE.equals(questionType) && !TYPE_BLANK.equals(questionType)) {
+            throw new IllegalArgumentException("无效的题型");
+        }
     }
 }

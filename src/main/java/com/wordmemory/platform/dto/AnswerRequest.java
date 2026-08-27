@@ -5,16 +5,7 @@ package com.wordmemory.platform.dto;
  */
 public class AnswerRequest {
 
-    private int wordId;
     private String answer;
-
-    public int getWordId() {
-        return wordId;
-    }
-
-    public void setWordId(int wordId) {
-        this.wordId = wordId;
-    }
 
     public String getAnswer() {
         return answer;
