@@ -26,12 +26,19 @@ public class LearningController {
     @Autowired
     private LearningService learningService;
 
-    /** 首页，合并自定义单词管理。 */
+    /** 首页：各功能模式入口。 */
     @GetMapping("/home")
-    public String home(HttpSession session, Model model) {
-        Integer userId = (Integer) session.getAttribute("userId");
-        model.addAttribute("customWords", learningService.listCustomWords(userId));
+    public String home() {
         return "home";
+    }
+
+    /** 词库管理页：展示内置词库与本人自定义单词。 */
+    @GetMapping("/words")
+    public String library(HttpSession session, Model model) {
+        Integer userId = (Integer) session.getAttribute("userId");
+        model.addAttribute("builtinWords", learningService.listBuiltinWords());
+        model.addAttribute("customWords", learningService.listCustomWords(userId));
+        return "library";
     }
 
     @GetMapping("/learning")
@@ -80,7 +87,7 @@ public class LearningController {
         Integer userId = (Integer) session.getAttribute("userId");
         if (file == null || file.isEmpty()) {
             redirectAttributes.addFlashAttribute("error", "请选择要导入的 CSV 文件");
-            return "redirect:/home";
+            return "redirect:/words";
         }
         try {
             ImportResult result = learningService.importWords(file.getInputStream(), userId);
@@ -88,7 +95,7 @@ public class LearningController {
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "导入失败：" + e.getMessage());
         }
-        return "redirect:/home";
+        return "redirect:/words";
     }
 
     @PostMapping("/words/delete")
@@ -101,6 +108,6 @@ public class LearningController {
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
         }
-        return "redirect:/home";
+        return "redirect:/words";
     }
 }

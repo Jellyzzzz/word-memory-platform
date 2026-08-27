@@ -153,6 +153,10 @@ public class LearningService {
         progressMapper.updateProgress(progress);
     }
 
+    public List<Word> listBuiltinWords() {
+        return wordMapper.findAllBuiltin();
+    }
+
     public List<Word> listCustomWords(Integer userId) {
         return wordMapper.listCustomWords(userId);
     }

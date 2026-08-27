@@ -13,13 +13,8 @@
 <nav class="navbar navbar-expand navbar-dark bg-primary mb-4">
     <div class="container">
         <a class="navbar-brand" href="<c:url value='/home'/>">单词记忆平台</a>
-        <ul class="navbar-nav me-auto">
-            <li class="nav-item"><a class="nav-link" href="<c:url value='/home'/>">首页</a></li>
-            <li class="nav-item"><a class="nav-link" href="<c:url value='/learning'/>">学习</a></li>
-            <li class="nav-item"><a class="nav-link" href="<c:url value='/review'/>">复习</a></li>
-            <li class="nav-item"><a class="nav-link" href="<c:url value='/ranking'/>">排行榜</a></li>
-        </ul>
-        <span class="navbar-text">
+        <a class="btn btn-sm btn-outline-light ms-2" href="<c:url value='/home'/>">返回首页</a>
+        <span class="navbar-text ms-auto">
             ${sessionScope.username}
             <a class="btn btn-sm btn-outline-light ms-2" href="<c:url value='/logout'/>">退出</a>
         </span>
