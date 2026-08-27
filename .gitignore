@@ -1,6 +1,9 @@
 # Maven
 target/
 
+# Tomcat runtime (local, not committed)
+tomcat/
+
 # IntelliJ IDEA
 .idea/
 *.iml

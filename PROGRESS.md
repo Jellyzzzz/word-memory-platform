@@ -17,10 +17,11 @@
 | --- | --- | --- |
 | 基础设施 / 工程配置 | ✅ 100% | 构建、Spring/MyBatis、Web、SQL、文档全部就绪 |
 | 业务代码（Java + JSP + Mapper XML） | ✅ 100% | 三层 + 拦截器 + 工具 + 6 个 JSP 全部实现 |
-| **整体** | **约 95%** | 代码完整、`mvn clean package` 通过；待 DB 配置 + 部署联调 |
+| 运行环境（DB / Tomcat / 部署） | ✅ 100% | 建库建表完成、Tomcat 9 内置 `tomcat/`、WAR 已部署启动 |
+| **整体** | **约 98%** | 应用已可运行（登录页 200）；待浏览器端到端联调 + 合入 main |
 
-> 代码层面已完成：23 个 Java 源文件 + 4 个 Mapper XML + 6 个 JSP，`mvn clean package` BUILD SUCCESS。
-> 剩余工作属于「运行环境」而非编码：建库建表、配置 `database.properties`、部署 Tomcat 9 联调。
+> 已可运行：`mvn clean package` BUILD SUCCESS；建库建表完成（4 表 + 12 内置单词），`database.properties` 已配置，Tomcat 9 解压于项目 `tomcat/`（已 gitignore），WAR 已部署，`http://localhost:8080/word-memory-platform/login` 可访问。
+> 注：`schema.sql` 已修复 MySQL 8.0.16+ 下 CHECK 约束与外键 `ON DELETE CASCADE` 冲突（`ERROR 3823`），去掉 `words.owner_id` 与 `likes` 两表外键的级联动作，保留全部 CHECK 与外键关系。
 
 ---
 
@@ -118,10 +119,16 @@
 
 ---
 
-## 五、剩余待办（运行环境与联调，非编码）
+## 五、剩余待办（仅剩浏览器端到端验证与收尾）
 
-1. [ ] 启动 MySQL，执行 `SOURCE sql/schema.sql; SOURCE sql/data.sql;` 建库建表
-2. [ ] 复制 `database.properties.example` → `database.properties`，填写本机 `jdbc.url` / `jdbc.username` / `jdbc.password`
-3. [ ] 将 `target/word-memory-platform.war` 部署到 Tomcat 9，启动应用
-4. [ ] 端到端联调：注册 → 登录 → 学习 → 复习 → 导入 CSV → 排行榜 → 点赞
-5. [ ] （可选）`main` 分支只收已验证代码，功能开发走 `feat/<name>` 分支
+1. [x] 启动 MySQL，执行 `SOURCE sql/schema.sql; SOURCE sql/data.sql;` 建库建表（4 表 + 12 内置单词）
+2. [x] 生成 `database.properties`（root 账号）
+3. [x] Tomcat 9 内置项目 `tomcat/`（已 gitignore），WAR 已部署并启动，`/login` 返回 200
+4. [ ] 浏览器端到端联调：注册 → 登录 → 学习 → 复习 → 导入 CSV → 排行榜 → 点赞
+5. [ ] `main` 分支只收已验证代码，联调通过后把 `feat/core-implementation` 合入 `main`
+
+### 启动 / 停止应用（Tomcat 已在项目 `tomcat/` 内）
+
+- 启动：设置 `CATALINA_HOME` 指向项目 `tomcat/`，运行 `tomcat\bin\startup.bat`
+- 停止：`tomcat\bin\shutdown.bat`
+- 访问：`http://localhost:8080/word-memory-platform/login`
