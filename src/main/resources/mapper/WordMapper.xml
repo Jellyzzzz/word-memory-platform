@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wordmemory.platform.mapper.WordMapper">
+
+    <select id="findAllBuiltin" resultType="com.wordmemory.platform.entity.Word">
+        SELECT word_id, english, chinese, part_of_speech, source, owner_id
+        FROM words
+        WHERE source = 'builtin'
+    </select>
+
+    <select id="findById" resultType="com.wordmemory.platform.entity.Word">
+        SELECT word_id, english, chinese, part_of_speech, source, owner_id
+        FROM words
+        WHERE word_id = #{wordId}
+    </select>
+
+    <select id="findAccessibleById" resultType="com.wordmemory.platform.entity.Word">
+        SELECT word_id, english, chinese, part_of_speech, source, owner_id
+        FROM words
+        WHERE word_id = #{wordId}
+          AND (source = 'builtin' OR (source = 'custom' AND owner_id = #{userId}))
+    </select>
+
+    <insert id="insertWord" parameterType="com.wordmemory.platform.entity.Word"
+            useGeneratedKeys="true" keyProperty="wordId">
+        INSERT INTO words (english, chinese, part_of_speech, source, owner_id)
+        VALUES (#{english}, #{chinese}, #{partOfSpeech}, #{source}, #{ownerId})
+    </insert>
+
+    <select id="listCustomWords" resultType="com.wordmemory.platform.entity.Word">
+        SELECT word_id, english, chinese, part_of_speech, source, owner_id
+        FROM words
+        WHERE source = 'custom' AND owner_id = #{ownerId}
+    </select>
+
+    <delete id="deleteCustomWord">
+        DELETE FROM words
+        WHERE word_id = #{wordId} AND source = 'custom' AND owner_id = #{ownerId}
+    </delete>
+
+    <select id="findRandomWords" resultType="com.wordmemory.platform.entity.Word">
+        SELECT word_id, english, chinese, part_of_speech, source, owner_id
+        FROM words
+        WHERE source = 'builtin' AND word_id &lt;&gt; #{excludeWordId}
+        ORDER BY RAND()
+        LIMIT #{limit}
+    </select>
+
+    <select id="listBuiltinWithProgress" resultType="com.wordmemory.platform.dto.WordProgress">
+        SELECT w.word_id, w.english, w.chinese, w.part_of_speech,
+               COALESCE(p.proficiency, 0) AS proficiency
+        FROM words w
+        LEFT JOIN user_word_progress p ON p.word_id = w.word_id AND p.user_id = #{userId}
+        WHERE w.source = 'builtin'
+    </select>
+
+    <select id="listCustomWithProgress" resultType="com.wordmemory.platform.dto.WordProgress">
+        SELECT w.word_id, w.english, w.chinese, w.part_of_speech,
+               COALESCE(p.proficiency, 0) AS proficiency
+        FROM words w
+        LEFT JOIN user_word_progress p ON p.word_id = w.word_id AND p.user_id = #{userId}
+        WHERE w.source = 'custom' AND w.owner_id = #{userId}
+    </select>
+
+</mapper>

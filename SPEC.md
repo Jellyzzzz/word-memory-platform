@@ -807,15 +807,18 @@ home.jsp
 learning.jsp
 review.jsp
 ranking.jsp
+library.jsp
 ```
 
-自定义单词管理优先合并至：
+`home.jsp` 作为各功能模式的入口页，导航到学习、复习、词库管理、排行榜。
+
+自定义单词管理（查看、CSV 导入、删除）与内置词库查看合并至独立的：
 
 ```text
-home.jsp
+library.jsp
 ```
 
-避免增加不必要页面。
+页面顶部导航仅保留品牌入口、用户名与退出，各模式入口统一放在 `home.jsp`。
 
 ---
 

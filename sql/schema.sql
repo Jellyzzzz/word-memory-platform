@@ -40,8 +40,6 @@ CREATE TABLE IF NOT EXISTS words (
     ),
     CONSTRAINT fk_words_owner
         FOREIGN KEY (owner_id) REFERENCES users (user_id)
-        ON UPDATE CASCADE
-        ON DELETE CASCADE
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci
@@ -82,13 +80,9 @@ CREATE TABLE IF NOT EXISTS likes (
     INDEX idx_likes_to_user (to_user_id),
     CONSTRAINT chk_likes_not_self CHECK (from_user_id <> to_user_id),
     CONSTRAINT fk_likes_from_user
-        FOREIGN KEY (from_user_id) REFERENCES users (user_id)
-        ON UPDATE CASCADE
-        ON DELETE CASCADE,
+        FOREIGN KEY (from_user_id) REFERENCES users (user_id),
     CONSTRAINT fk_likes_to_user
         FOREIGN KEY (to_user_id) REFERENCES users (user_id)
-        ON UPDATE CASCADE
-        ON DELETE CASCADE
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci

@@ -1,0 +1,26 @@
+body {
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+}
+
+/* 选择题选项卡片式排布，移动端触控友好 */
+.option-list label {
+    display: block;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.option-list label:hover {
+    background-color: #f8f9fa;
+}
+
+.option-list input[type="radio"] {
+    margin-right: 0.5rem;
+}
+
+.quiz-card {
+    max-width: 640px;
+}
