@@ -15,10 +15,10 @@ Authoritative docs: `README.md` (setup/deploy) and `SPEC.md` (full business + co
 ## Commands
 
 ```bash
-mvn clean package        # compile + package WAR -> target/word-memory-platform.war
+mvn clean package        # compile, run tests, package WAR -> target/word-memory-platform.war
 ```
 
-There is **no test framework configured** (no JUnit dependency, no `src/test`). Verification is done by building and deploying.
+Tests use **JUnit 5 + Mockito** (in `src/test/java`) and run automatically during `mvn clean package`; they are pure unit tests with mocked dependencies (no DB or servlet container required). Deploy the WAR for end-to-end verification.
 
 **Database setup (one-time per machine):** from the repo root, run the MySQL client and source the scripts:
 
