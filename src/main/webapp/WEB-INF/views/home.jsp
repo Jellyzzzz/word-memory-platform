@@ -6,73 +6,87 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>首页 - 单词记忆平台</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="<c:url value='/static/css/style.css'/>" rel="stylesheet">
+    <link href="<c:url value='/static/css/style.css'/>?v=2" rel="stylesheet">
 </head>
-<body class="bg-light">
-<nav class="navbar navbar-expand navbar-dark bg-primary mb-4">
-    <div class="container">
-        <a class="navbar-brand" href="<c:url value='/home'/>">单词记忆平台</a>
-        <span class="navbar-text ms-auto">
-            <c:out value="${sessionScope.username}"/>
-            <form action="<c:url value='/logout'/>" method="post" class="d-inline ms-2">
+<body class="app-body">
+<header class="app-header">
+    <div class="app-container app-nav">
+        <a class="brand" href="<c:url value='/home'/>" aria-label="单词记忆平台首页">
+            <span class="brand-mark" aria-hidden="true">W</span>
+            <span>WORD MEMORY</span>
+        </a>
+        <div class="nav-actions">
+            <span class="user-chip">
+                <span class="user-avatar" aria-hidden="true">👋</span>
+                <c:out value="${sessionScope.username}"/>
+            </span>
+            <form action="<c:url value='/logout'/>" method="post" class="logout-form">
                 <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
-                <button type="submit" class="btn btn-sm btn-outline-light">退出</button>
+                <button type="submit" class="logout-button">退出</button>
             </form>
-        </span>
+        </div>
     </div>
-</nav>
-<div class="container">
-    <c:if test="${not empty error}">
-        <div class="alert alert-danger"><c:out value="${error}"/></div>
-    </c:if>
-    <div class="p-4 mb-4 bg-white rounded shadow-sm text-center">
-        <h2>欢迎，<c:out value="${sessionScope.username}"/></h2>
-        <p class="text-muted mb-0">选择一个模式开始学习</p>
-    </div>
+</header>
 
-    <div class="row g-4">
-        <div class="col-md-6">
-            <a href="<c:url value='/learning'/>" class="text-decoration-none">
-                <div class="card h-100 text-center">
-                    <div class="card-body p-4">
-                        <h4 class="card-title text-primary">学习模式</h4>
-                        <p class="card-text text-muted">学习待掌握的新单词</p>
-                    </div>
-                </div>
-            </a>
+<main class="app-container page-shell home-page">
+    <c:if test="${not empty error}">
+        <div class="notice notice--error" role="alert">
+            <span aria-hidden="true">!</span>
+            <c:out value="${error}"/>
         </div>
-        <div class="col-md-6">
-            <a href="<c:url value='/review'/>" class="text-decoration-none">
-                <div class="card h-100 text-center">
-                    <div class="card-body p-4">
-                        <h4 class="card-title text-primary">复习模式</h4>
-                        <p class="card-text text-muted">巩固已掌握的单词</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-6">
-            <a href="<c:url value='/words'/>" class="text-decoration-none">
-                <div class="card h-100 text-center">
-                    <div class="card-body p-4">
-                        <h4 class="card-title text-primary">词库管理</h4>
-                        <p class="card-text text-muted">查看词库、导入自定义单词</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-6">
-            <a href="<c:url value='/ranking'/>" class="text-decoration-none">
-                <div class="card h-100 text-center">
-                    <div class="card-body p-4">
-                        <h4 class="card-title text-primary">排行榜</h4>
-                        <p class="card-text text-muted">查看积分排名并点赞</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-    </div>
-</div>
+    </c:if>
+
+    <section class="home-hero">
+        <p class="page-kicker">Ready to learn?</p>
+        <h1 class="home-title">你好，<c:out value="${sessionScope.username}"/></h1>
+        <p class="home-subtitle">今天也继续前进一点，把见过的单词真正记住。</p>
+    </section>
+
+    <section class="home-grid" aria-label="学习功能">
+        <a href="<c:url value='/learning'/>" class="action-card action-card--primary">
+            <span class="action-icon" aria-hidden="true">▶</span>
+            <span class="action-copy">
+                <span class="page-kicker page-kicker--inverse">今日任务</span>
+                <strong class="action-label">继续学习</strong>
+                <span class="action-description">掌握新的单词，逐步提升熟练度</span>
+            </span>
+            <span class="action-arrow" aria-hidden="true">→</span>
+        </a>
+
+        <a href="<c:url value='/review'/>" class="action-card">
+            <span class="action-icon" aria-hidden="true">↻</span>
+            <span class="action-copy">
+                <strong class="action-label">复习模式</strong>
+                <span class="action-description">重新挑战已掌握的内容</span>
+            </span>
+            <span class="action-arrow" aria-hidden="true">→</span>
+        </a>
+
+        <a href="<c:url value='/words'/>" class="action-card">
+            <span class="action-icon" aria-hidden="true">Aa</span>
+            <span class="action-copy">
+                <strong class="action-label">我的词库</strong>
+                <span class="action-description">查看熟练度，导入自己的单词</span>
+            </span>
+            <span class="action-arrow" aria-hidden="true">→</span>
+        </a>
+
+        <a href="<c:url value='/ranking'/>" class="action-card action-card--ranking">
+            <span class="action-icon" aria-hidden="true">★</span>
+            <span class="action-copy">
+                <strong class="action-label">排行榜</strong>
+                <span class="action-description">看看谁积累得最多，也为伙伴点个赞</span>
+            </span>
+            <span class="action-arrow" aria-hidden="true">→</span>
+        </a>
+    </section>
+</main>
+
+<nav class="mobile-nav" aria-label="主要导航">
+    <a href="<c:url value='/learning'/>"><span class="nav-icon" aria-hidden="true">▶</span><span>学习</span></a>
+    <a href="<c:url value='/review'/>"><span class="nav-icon" aria-hidden="true">↻</span><span>复习</span></a>
+    <a href="<c:url value='/words'/>"><span class="nav-icon" aria-hidden="true">Aa</span><span>词库</span></a>
+    <a href="<c:url value='/ranking'/>"><span class="nav-icon" aria-hidden="true">★</span><span>排行</span></a>
+</nav>
 </body>
 </html>
